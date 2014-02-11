@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="VORTEX_TOGGLE" header="VORTEX">
+		ToggleFrame(VortexFrame)
+	</Binding>
+</Bindings>

@@ -1,0 +1,23 @@
+## Interface: 50400
+## Title: Vortex
+## Version: @project-version@
+## Notes: View information about all your characters.
+## Author: Lombra
+## SavedVariables: VortexDB
+## RequiredDeps: DataStore
+
+embeds.xml
+
+Core.lua
+UI.lua
+Search.lua
+Options.lua
+
+Character.lua
+Bags.lua
+Bank.lua
+Void.lua
+Mail.lua
+Auctions.lua
+
+GuildBank.lua
