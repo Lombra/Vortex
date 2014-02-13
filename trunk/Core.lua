@@ -24,9 +24,9 @@ local defaults = {
 	global = {
 		tooltip = true,
 		tooltipBNet = true,
-		tooltipGuildBanks = true,
+		tooltipGuild = true,
 		useListView = false,
-		searchGuildBanks = true,
+		searchGuild = true,
 		defaultModule = "All",
 		defaultSearch = "Realm",
 	},
@@ -93,7 +93,7 @@ local moduleMethods = {
 }
 
 function addon:OnModuleCreated(name, table)
-	local module = self:CreateUI(name)
+	local module = self:CreateUI(name, table.label)
 	if table.altUI then
 		addUI(table)
 	end
@@ -123,7 +123,6 @@ function addon:SelectModule(moduleName)
 		self:SetList(module:GetList(selectedCharacter))
 	else
 		module.ui:Show()
-		-- module:UpdateUI(selectedCharacter)
 	end
 	module:Update(selectedCharacter)
 	self.frame.list:SetShown(showList)
@@ -152,6 +151,9 @@ function addon:SelectCharacter(character)
 	self.characterMenu:SetText(charKey)
 	self:GetSelectedModule():Update(character)
 	self:CloseAllContainers()
+	if self.isSearching then
+		self:StopSearch()
+	end
 end
 
 function addon:GetSelectedCharacter()

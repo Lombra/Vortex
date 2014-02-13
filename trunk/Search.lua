@@ -45,16 +45,9 @@ searchBox:SetTextColor(0.5, 0.5, 0.5)
 searchBox.clearFunc = function()
 	addon:ClearFilter("name")
 end
--- searchBox.clearButton:SetSize(16, 16)
--- searchBox.clearButton.texture:SetSize(16, 16)
--- searchBox.clearButton:SetPoint("RIGHT", -3, -1)
 searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
 searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
 searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
--- searchBox:SetScript("OnEscapePressed", function(self)
-	-- self:SetText("")
-	-- self:ClearFocus()
--- end)
 searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	if not isUserInput then
 		return
@@ -87,17 +80,62 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	addon:ApplyFilters()
 end)
 
+local searchMenuOptions = {
+	-- "UI",
+	"Character",
+	"Realm",
+	"All",
+}
+
+local function onClick(self, arg1)
+	searchFilter = arg1
+	addon:ClearSearchResultsCache()
+	self.owner:SetText("|cffffd200Search:|r "..searchFilter)
+	local module = addon:GetSelectedModule()
+	local character = addon:GetSelectedCharacter()
+	if searchFilter ~= "UI" then
+		if addon:GetFilter("name") then
+			addon:Search()
+			local list = addon:GetCache()
+			-- addon:SetList(list) -- don't UpdateList here
+			addon.list = list or empty
+			addon.filteredList = nil
+			addon:ApplyFilters()
+		end
+	else
+		addon:StopSearch()
+		module:Search(addon:GetFilter("name"))
+	end
+end
+
+local button = Libra:CreateDropdown(VortexFrameTab1.frame, true)
+button:SetWidth(128)
+button:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
+-- button:SetLabel("Search in:")
+-- button:JustifyText("LEFT")
+button:SetText("|cffffd200Search:|r "..searchFilter)
+button.initialize = function(self, level)
+	for i, option in ipairs(searchMenuOptions) do
+		local info = UIDropDownMenu_CreateInfo()
+		info.text = option
+		info.func = onClick
+		info.arg1 = option
+		info.checked = option == searchFilter
+		info.owner = self
+		UIDropDownMenu_AddButton(info, level)
+	end
+end
+
 local filterBar = CreateFrame("Frame", nil, addon.frame.list)
 filterBar:SetPoint("TOP", 0, -4)
 filterBar:SetPoint("LEFT", 4, 0)
-filterBar:SetPoint("RIGHT", -23-3, 0)
+filterBar:SetPoint("RIGHT", -26, 0)
 filterBar:SetHeight(16)
-filterBar:Hide()
-
 filterBar:SetBackdrop({
 	bgFile = [[Interface\Buttons\UI-Listbox-Highlight2]],
 })
 filterBar:SetBackdropColor(0.6, 0.75, 1.0, 0.5)
+filterBar:Hide()
 
 filterBar.text = filterBar:CreateFontString(nil, nil, "GameFontHighlightSmall")
 filterBar.text:SetPoint("LEFT", 5, 0)
@@ -172,15 +210,31 @@ function addon:SearchContainer(containerID, character)
 	end
 end
 
+local function dynamic(offset)
+	local heightLeft = offset
+	
+	for i, item in ipairs(addon:GetList()) do
+		local buttonHeight = addon:GetItemSearchResultText(item.id or item.link)
+		
+		if heightLeft - buttonHeight <= 0 then
+			return i - 1, heightLeft
+		else
+			heightLeft = heightLeft - buttonHeight
+		end
+	end
+end
+
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 function addon:Search()
 	addon.isSearching = true
 	self.filterBar:Show()
 	self.filterBar.text:SetText("Searching in "..searchFilter)
 	self.scroll:SetPoint("TOP", self.filterBar, "BOTTOM")
+	self.scroll.dynamic = dynamic
 	self.frame.ui:Hide()
 	self.frame.list:Show()
 	self.frame:SetWidth(PANEL_DEFAULT_WIDTH + LIST_PANEL_WIDTH)
+	UpdateUIPanelPositions(self.frame)
 	local module = addon:GetSelectedModule()
 	module.button.highlight:SetDesaturated(true)
 end
@@ -189,6 +243,7 @@ function addon:StopSearch()
 	addon.isSearching = false
 	self.filterBar:Hide()
 	self.scroll:SetPoint("TOP", self.frame.Inset, 0, -4)
+	self.scroll.dynamic = nil
 	searchBox:SetText(SEARCH)
 	searchBox:ClearFocus()
 	searchBox.clearButton:Hide()
@@ -257,7 +312,6 @@ function addon:GetCache()
 		doUpdateResults = nil
 		wipe(resultsCache)
 		wipe(searchResults)
-		local t = debugprofilestop()
 		if searchFilter == "Character" then
 			mergeCharacterItems(resultsCache, self:GetSelectedCharacter())
 		elseif searchFilter == "Realm" then
@@ -267,17 +321,9 @@ function addon:GetCache()
 				mergeItems(resultsCache, realm)
 			end
 		end
-		-- print("build:", debugprofilestop() - t)
 	end
 	return resultsCache
 end
-
-local c = {}
-local c2 = {}
-local c3 = {}
-
-local dummy = addon.frame:CreateFontString(nil, nil, "GameFontHighlightSmallLeft")
-dummy:SetSpacing(1)
 
 local function sortItemResults(a, b)
 	-- guilds gets sorted after characters
@@ -307,10 +353,18 @@ local function sortItemResults(a, b)
 	end
 end
 
+local c = {}
+local c2 = {}
+local c3 = {}
+
+local dummy = addon.frame:CreateFontString(nil, nil, "GameFontHighlightSmallLeft")
+dummy:SetSpacing(1)
+
 function addon:GetItemSearchResultText(item)
 	if not self.isSearching then
 		return BUTTON_HEIGHT + BUTTON_OFFSET
 	end
+	-- return cached search info if available
 	if c[item] then return c[item], c2[item], c3[item] end
 	local result = searchResults[item]
 	if not result then return BUTTON_HEIGHT + BUTTON_OFFSET end
@@ -351,52 +405,6 @@ function addon:ClearSearchResultsCache()
 	wipe(c)
 	wipe(c2)
 	wipe(c3)
-end
-
-local searchMenuOptions = {
-	-- "UI",
-	"Character",
-	"Realm",
-	"All",
-}
-
-local function onClick(self, arg1)
-	searchFilter = arg1
-	addon:ClearSearchResultsCache()
-	self.owner:SetText("|cffffd200Search:|r "..searchFilter)
-	local module = addon:GetSelectedModule()
-	local character = addon:GetSelectedCharacter()
-	if searchFilter ~= "UI" then
-		if addon:GetFilter("name") then
-			addon:Search()
-			local list = addon:GetCache()
-			-- addon:SetList(list) -- don't UpdateList here
-			addon.list = list or empty
-			addon.filteredList = nil
-			addon:ApplyFilters()
-		end
-	else
-		addon:StopSearch()
-		module:Search(addon:GetFilter("name"))
-	end
-end
-
-local button = Libra:CreateDropdown(VortexFrameTab1.frame, true)
-button:SetWidth(128)
-button:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
--- button:SetLabel("Search in:")
--- button:JustifyText("LEFT")
-button:SetText("|cffffd200Search:|r "..searchFilter)
-button.initialize = function(self, level)
-	for i, option in ipairs(searchMenuOptions) do
-		local info = UIDropDownMenu_CreateInfo()
-		info.text = option
-		info.func = onClick
-		info.arg1 = option
-		info.checked = option == searchFilter
-		info.owner = self
-		UIDropDownMenu_AddButton(info, level)
-	end
 end
 
 addon.filterArgs = {}

@@ -48,19 +48,21 @@ local options = {
 	},
 	{
 		text = "Add tooltip guild info",
-		key = "tooltipGuildBanks",
+		key = "tooltipGuild",
 	},
 	{
 		text = "Use list view",
 		key = "useListView",
 		func = function()
-			addon:SelectModule(addon:GetSelectedModule().name)
-			addon:CloseAllContainers()
+			if not addon.isSearching then
+				addon:SelectModule(addon:GetSelectedModule().name)
+				addon:CloseAllContainers()
+			end
 		end,
 	},
 	{
 		text = "Search guild banks",
-		key = "searchGuildBanks",
+		key = "searchGuild",
 	},
 }
 
