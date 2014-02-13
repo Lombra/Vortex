@@ -11,8 +11,8 @@ BINDING_NAME_VORTEX_TOGGLE = "Toggle Vortex"
 SlashCmdList["VORTEX"] = function(msg)
 	ToggleFrame(addon.frame)
 end
-SLASH_INVENTORY1 = "/vortex"
-SLASH_INVENTORY2 = "/vx"
+SLASH_VORTEX1 = "/vortex"
+SLASH_VORTEX2 = "/vx"
 
 addon = Libra:NewAddon("Vortex", addon)
 
