@@ -21,11 +21,6 @@ end)
 local function OnGuildBankFrameClosed(self)
 	self:UnregisterEvent("GUILDBANKFRAME_CLOSED")
 	self:UnregisterEvent("GUILDBANKBAGSLOTS_CHANGED")
-	
-	-- local guildName = GetGuildInfo("player")
-	-- if guildName then
-		-- GuildBroadcast(MSG_SEND_BANK_TIMESTAMPS, GetBankTimestamps(guildName))
-	-- end
 end
 
 local function OnGuildBankBagSlotsChanged()

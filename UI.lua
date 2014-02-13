@@ -122,7 +122,7 @@ end
 local buttons = {}
 addon.moduleButtons = buttons
 
-function addon:CreateUI(name)
+function addon:CreateUI(name, label)
 	local button = CreateFrame("Button", nil, inset)
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	button:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
@@ -137,7 +137,7 @@ function addon:CreateUI(name)
 	button.label:SetPoint("LEFT", 11, 0)
 	button:SetFontString(button.label)
 	button.module = name
-	button:SetText(name)
+	button:SetText(label or name)
 	self:GetModule(name).button = button
 	
 	local i = #buttons + 1
@@ -320,6 +320,7 @@ end
 
 do
 	local All = addon:NewModule("All", {
+		label = "All items",
 		noSearch = true,
 	})
 	
@@ -606,7 +607,7 @@ do
 				local buttonHeight, owners, count = addon:GetItemSearchResultText(object.id)
 				local count = count or object.count
 				if (count and count > 1) then
-					button.label:SetFormattedText("%s |cffffffff(%d)|r", item.name, count or object.count)
+					button.label:SetFormattedText("%s |cffffffff(%d)|r", item.name, count)
 				else
 					button.label:SetText(item.name)
 				end
@@ -618,7 +619,6 @@ do
 				doUpdateList = true
 			end
 		end
-		if not button.icon:GetTexture() then print(object.id or object.link) end
 		button.item = object.link or object.id
 		
 		if button.showingTooltip then
@@ -626,20 +626,6 @@ do
 				button:OnEnter()
 			else
 				GameTooltip:Hide()
-			end
-		end
-	end
-	
-	local function dynamic(offset)
-		local heightLeft = offset
-		
-		for i, item in ipairs(addon:GetList()) do
-			local buttonHeight = addon:GetItemSearchResultText(item.id or item.link)
-			
-			if heightLeft - buttonHeight <= 0 then
-				return i - 1, heightLeft
-			else
-				heightLeft = heightLeft - buttonHeight
 			end
 		end
 	end
@@ -668,7 +654,7 @@ do
 					selectedModule:UpdateButton(button, object)
 				else
 					updateButton(button, object)
-					if selectedModule and selectedModule.OnButtonUpdate then
+					if not addon.isSearching and selectedModule and selectedModule.OnButtonUpdate then
 						selectedModule:OnButtonUpdate(button, object)
 					end
 				end
@@ -676,12 +662,18 @@ do
 			button:SetShown(object ~= nil)
 		end
 		
-		local totalHeight = 0
+		local totalHeight = #list * self.buttonHeight
+		local displayedHeight = numButtons * self.buttonHeight
 		
-		for i, item in ipairs(list) do
-			totalHeight = totalHeight + addon:GetItemSearchResultText(item.id or item.link)
+		if addon.isSearching then
+			totalHeight = 0
+			for i, item in ipairs(list) do
+				totalHeight = totalHeight + addon:GetItemSearchResultText(item.id or item.link)
+			end
+			displayedHeight = displayedHeight - 20
 		end
-		HybridScrollFrame_Update(self, totalHeight or #list * self.buttonHeight, numButtons * self.buttonHeight - (addon.isSearching and 16+4 or 0))
+		
+		HybridScrollFrame_Update(self, totalHeight, displayedHeight)
 	end
 	
 	local name = getWidgetName()
@@ -694,7 +686,6 @@ do
 	end
 	_G[name] = nil
 	addon.scroll = scrollFrame
-	scrollFrame.dynamic = dynamic
 	
 	local scrollBar = CreateFrame("Slider", nil, scrollFrame, "HybridScrollBarTemplate")
 	scrollBar:ClearAllPoints()
@@ -794,7 +785,7 @@ addon.defaultSort = listSort
 function addon:UpdateList()
 	local module = self:GetSelectedModule()
 	if not module.noSort then
-		sort(self:GetList(), module.sort or listSort)
+		sort(self:GetList(), not addon.isSearching and module.sort or listSort)
 	end
 	self:UpdateScrollFrame()
 end
