@@ -46,7 +46,7 @@ end
 
 function Mail:BuildList(character)
 	local list = {}
-	for i = 1, DataStore:GetNumMails(character) do
+	for i = 1, (DataStore:GetNumMails(character) or 0) do
 		local icon, count, link, money, text, returned = DataStore:GetMailInfo(character, i)
 		local itemID = link and tonumber(link:match("item:(%d+)"))
 		if itemID or money then
