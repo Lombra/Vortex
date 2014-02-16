@@ -93,10 +93,6 @@ end
 
 local charTab = createTab()
 charTab:SetText("Character")
--- charTab.frame = CreateFrame("Frame", nil, frame)
--- charTab.frame:SetAllPoints()
--- charTab.frame:Hide()
--- frame.Inset:SetParent(charTab.frame)
 charTab.frame = frame.Inset
 inset:SetParent(charTab.frame)
 
@@ -225,32 +221,16 @@ end
 -- ITEM_BIND_TO_BNETACCOUNT = "Binds to Battle.net account";
 -- ITEM_BNETACCOUNTBOUND = "Battle.net Account Bound";
 
-local lol, again
-
-GameTooltip:HookScript("OnTooltipSetItem", function(self)
-	if lol and not again then
-		return
-	end
-	if not addon.db.tooltip then
-		return
-	end
-	lol = true
-	local itemName, itemLink = self:GetItem()
-	local itemID = itemLink and tonumber(itemLink:match("item:(%d+)"))
-	if not itemID then return end
-	-- don't add tooltip info for unstackable soulbound items
-	if (not ItemInfo[itemID] or ItemInfo[itemID].stackSize == 1) and isSoulboundItem(itemID) then
-		return
-	end
-	local numChars = 0
-	local total = 0
-	for i, character in ipairs(addon:GetCharacters()) do
+local function getItem(tooltip, item, realm)
+	local realmTotal = 0
+	local realmNumChars = 0
+	for i, character in ipairs(addon:GetCharacters(realm)) do
 		local _, _, charKey = strsplit(".", character)
 		local where = "("
 		local count = 0
 		for k, module in addon:IterateModules() do
 			if not module.noSearch then
-				local moduleCount = module:GetItemCount(character, itemID) or 0
+				local moduleCount = module:GetItemCount(character, item) or 0
 				if moduleCount > 0 then
 					count = count + moduleCount
 					where = format("%s%d %s, ", where, moduleCount, k)
@@ -258,37 +238,46 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 			end
 		end
 		if count > 0 then
-			self:AddLine("|cffffffff"..count.."|r "..charKey.." "..gsub(where, ", $", ")"))
-			numChars = numChars + 1
+			if realm then
+				tooltip:AddLine("|cffffffff"..count.."|r "..charKey.." - "..realm.." "..gsub(where, ", $", ")"))
+			else
+				tooltip:AddLine("|cffffffff"..count.."|r "..charKey.." "..gsub(where, ", $", ")"))
+			end
+			realmNumChars = realmNumChars + 1
 		end
-		total = total + count
+		realmTotal = realmTotal + count
 	end
+	return realmTotal, realmNumChars
+end
+
+local tooltipInfoAdded
+
+GameTooltip:HookScript("OnTooltipSetItem", function(self)
+	if tooltipInfoAdded then
+		return
+	end
+	if not addon.db.tooltip then
+		return
+	end
+	tooltipInfoAdded = true
+	local itemName, itemLink = self:GetItem()
+	local itemID = itemLink and tonumber(itemLink:match("item:(%d+)"))
+	if not itemID then return end
+	-- don't add tooltip info for unstackable soulbound items
+	if (not ItemInfo[itemID] or ItemInfo[itemID].stackSize == 1) and isSoulboundItem(itemID) then
+		return
+	end
+	local total, numChars = getItem(self, itemID)
 	if addon.db.tooltipBNet and isBNetBoundItem(itemID) then
 		for realm in pairs(DataStore:GetRealms()) do
 			if realm ~= myRealm then
-				for i, character in ipairs(addon:GetCharacters(realm)) do
-					local _, _, charKey = strsplit(".", character)
-					local where = "("
-					local count = 0
-					for k, module in addon:IterateModules() do
-						if not module.noSearch then
-							local moduleCount = module:GetItemCount(character, itemID) or 0
-							if moduleCount > 0 then
-								count = count + moduleCount
-								where = format("%s%d %s, ", where, moduleCount, k)
-							end
-						end
-					end
-					if count > 0 then
-						self:AddLine("|cffffffff"..count.."|r "..charKey.." - "..realm.." "..gsub(where, ", $", ")"))
-						numChars = numChars + 1
-					end
-					total = total + count
-				end
+				local realmTotal, realmNumChars = getItem(self, itemID, realm)
+				total = total + realmTotal
+				numChars = numChars + realmNumChars
 			end
 		end
 	end
-	if addon.db.tooltipGuildBanks then
+	if addon.db.tooltipGuild then
 		for guild, guildKey in pairs(DataStore:GetGuilds()) do
 			local count = DataStore:GetGuildBankItemCount(guildKey, itemID)
 			if count > 0 then
@@ -305,8 +294,7 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 end)
 
 GameTooltip:HookScript("OnTooltipCleared", function(self)
-	lol = nil
-	again = nil
+	tooltipInfoAdded = nil
 end)
 
 local onTooltipAddMoney = GameTooltip_OnTooltipAddMoney

@@ -14,6 +14,21 @@ end
 SLASH_VORTEX1 = "/vortex"
 SLASH_VORTEX2 = "/vx"
 
+local dataobj = LibStub("LibDataBroker-1.1"):NewDataObject("Vortex", {
+	type = "launcher",
+	label = "Vortex",
+	icon = [[Interface\Icons\Achievement_GuildPerk_MobileBanking]],
+	OnClick = function(self, button)
+		-- if button == "LeftButton" then
+			ToggleFrame(addon.frame)
+		-- else
+		-- end
+	end,
+	-- OnTooltipShow = function()
+		-- addon:ShowTooltip(k)
+	-- end
+})
+
 addon = Libra:NewAddon("Vortex", addon)
 
 Vortex = addon
