@@ -104,32 +104,34 @@ function addon:LoadSettings()
 		end
 	end
 	
-	-- local scopes = {
-		-- "Character",
-		-- "Realm",
-		-- "All",
-	-- }
+	local scopes = {
+		"Character",
+		"Realm",
+		"All",
+	}
 	
-	-- local function onClick(self, module)
-		-- addon.db.defaultSearch = module
-		-- self.owner:SetText(module)
-	-- end
+	local function onClick(self, module)
+		addon.db.defaultSearch = module
+		self.owner:SetText(module)
+	end
 	
-	-- local defaultModule = Libra:CreateDropdown(frame, true)
-	-- defaultModule:SetWidth(128)
-	-- defaultModule:SetPoint("TOPLEFT", options[#options].button, "BOTTOMLEFT", -12, -24)
-	-- defaultModule:JustifyText("LEFT")
-	-- defaultModule:SetLabel("Default search scope")
-	-- defaultModule:SetText(self.db.defaultSearch)
-	-- defaultModule.initialize = function(self)
-		-- for i, v in ipairs(scopes) do
-			-- local info = UIDropDownMenu_CreateInfo()
-			-- info.text = v
-			-- info.func = onClick
-			-- info.arg1 = v
-			-- info.checked = (v == addon.db.defaultSearch)
-			-- info.owner = self
-			-- self:AddButton(info)
-		-- end
-	-- end
+	local defaultSearch = Libra:CreateDropdown(frame, true)
+	defaultSearch:SetWidth(128)
+	defaultSearch:SetPoint("TOP", defaultModule, "BOTTOM", 0, -16)
+	defaultSearch:JustifyText("LEFT")
+	defaultSearch:SetLabel("Default search scope")
+	defaultSearch:SetText(self.db.defaultSearch)
+	defaultSearch.initialize = function(self)
+		for i, v in ipairs(scopes) do
+			local info = UIDropDownMenu_CreateInfo()
+			info.text = v
+			info.func = onClick
+			info.arg1 = v
+			info.checked = (v == addon.db.defaultSearch)
+			info.owner = self
+			self:AddButton(info)
+		end
+	end
+	
+	self:SetSearchScope(self.db.defaultSearch)
 end

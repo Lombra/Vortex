@@ -88,31 +88,12 @@ local searchMenuOptions = {
 }
 
 local function onClick(self, arg1)
-	searchFilter = arg1
-	addon:ClearSearchResultsCache()
-	self.owner:SetText("|cffffd200Search:|r "..searchFilter)
-	local module = addon:GetSelectedModule()
-	local character = addon:GetSelectedCharacter()
-	if searchFilter ~= "UI" then
-		if addon:GetFilter("name") then
-			addon:Search()
-			local list = addon:GetCache()
-			-- addon:SetList(list) -- don't UpdateList here
-			addon.list = list or empty
-			addon.filteredList = nil
-			addon:ApplyFilters()
-		end
-	else
-		addon:StopSearch()
-		module:Search(addon:GetFilter("name"))
-	end
+	addon:SetSearchScope(arg1)
 end
 
 local button = Libra:CreateDropdown(VortexFrameTab1.frame, true)
 button:SetWidth(128)
 button:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
--- button:SetLabel("Search in:")
--- button:JustifyText("LEFT")
 button:SetText("|cffffd200Search:|r "..searchFilter)
 button.initialize = function(self, level)
 	for i, option in ipairs(searchMenuOptions) do
@@ -125,6 +106,7 @@ button.initialize = function(self, level)
 		UIDropDownMenu_AddButton(info, level)
 	end
 end
+addon.searchScopeMenu = button
 
 local filterBar = CreateFrame("Frame", nil, addon.frame.list)
 filterBar:SetPoint("TOP", 0, -4)
@@ -167,7 +149,6 @@ end)
 filterBar.clear:SetScript("OnHide", function(self)
 	self:SetPoint("RIGHT", -2, 0)
 end)
-addon.filterBar = filterBar
 
 local function match(item, searchString)
 	if not item then
@@ -227,9 +208,9 @@ end
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 function addon:Search()
 	addon.isSearching = true
-	self.filterBar:Show()
-	self.filterBar.text:SetText("Searching in "..searchFilter)
-	self.scroll:SetPoint("TOP", self.filterBar, "BOTTOM")
+	filterBar:Show()
+	filterBar.text:SetText("Searching in "..searchFilter)
+	self.scroll:SetPoint("TOP", filterBar, "BOTTOM")
 	self.scroll.dynamic = dynamic
 	self.frame.ui:Hide()
 	self.frame.list:Show()
@@ -241,7 +222,7 @@ end
 
 function addon:StopSearch()
 	addon.isSearching = false
-	self.filterBar:Hide()
+	filterBar:Hide()
 	self.scroll:SetPoint("TOP", self.frame.Inset, 0, -4)
 	self.scroll.dynamic = nil
 	searchBox:SetText(SEARCH)
@@ -251,6 +232,27 @@ function addon:StopSearch()
 	local module = addon:GetSelectedModule()
 	self:SelectModule(module.name)
 	-- module:Search()
+end
+
+function addon:SetSearchScope(scope)
+	searchFilter = scope
+	addon:ClearSearchResultsCache()
+	button:SetText("|cffffd200Search:|r "..scope)
+	local module = addon:GetSelectedModule()
+	local character = addon:GetSelectedCharacter()
+	if scope ~= "UI" then
+		if addon:GetFilter("name") then
+			addon:Search()
+			local list = addon:GetCache()
+			-- addon:SetList(list) -- don't UpdateList here
+			addon.list = list or empty
+			addon.filteredList = nil
+			addon:ApplyFilters()
+		end
+	else
+		addon:StopSearch()
+		module:Search(addon:GetFilter("name"))
+	end
 end
 
 local resultsCache = {} -- list of results passed to SetList
@@ -279,7 +281,7 @@ local function mergeItems(list, realm)
 	for k, character in pairs(DataStore:GetCharacters(realm)) do
 		mergeCharacterItems(list, character)
 	end
-	if addon.db.searchGuildBanks then
+	if addon.db.searchGuild then
 		for k, guild in pairs(DataStore:GetGuilds(realm)) do
 			for i = 1, 8 do
 				local tab = DataStore:GetGuildBankTab(guild, i)
