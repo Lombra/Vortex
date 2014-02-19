@@ -20,7 +20,7 @@ function Bags:Refresh()
 	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
 		self:Update(character)
 		for i, containerID in ipairs(self.containers) do
-			addon:UpdateContainer(containerID, character, buttons)
+			addon:UpdateContainer(containerID, character)
 		end
 	end
 end

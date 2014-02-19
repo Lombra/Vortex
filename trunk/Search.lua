@@ -384,7 +384,7 @@ function addon:GetItemSearchResultText(item)
 			local accountKey, realm, name = strsplit(".", v)
 			local name, count = gsub(name, "|$", "")
 			if count > 0 then
-				name = "|cffffd200<"..name..">|r"
+				name = "|cff56a3ff<"..name..">|r"
 			end
 			if realm == myRealm then
 				sorted[i] = format("|cffffffff%d|r %s", result[v], name)

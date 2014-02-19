@@ -19,10 +19,11 @@ local dataobj = LibStub("LibDataBroker-1.1"):NewDataObject("Vortex", {
 	label = "Vortex",
 	icon = [[Interface\Icons\Achievement_GuildPerk_MobileBanking]],
 	OnClick = function(self, button)
-		-- if button == "LeftButton" then
+		if button == "LeftButton" then
 			ToggleFrame(addon.frame)
-		-- else
-		-- end
+		else
+			InterfaceOptionsFrame_OpenToCategory(addon.config)
+		end
 	end,
 	-- OnTooltipShow = function()
 		-- addon:ShowTooltip(k)
@@ -30,6 +31,8 @@ local dataobj = LibStub("LibDataBroker-1.1"):NewDataObject("Vortex", {
 })
 
 addon = Libra:NewAddon("Vortex", addon)
+
+addon.modulesSorted = {}
 
 Vortex = addon
 
@@ -40,6 +43,7 @@ local defaults = {
 		tooltip = true,
 		tooltipBNet = true,
 		tooltipGuild = true,
+		tooltipModifier = false,
 		useListView = false,
 		searchGuild = true,
 		defaultModule = "All",
@@ -115,6 +119,7 @@ function addon:OnModuleCreated(name, table)
 	for k, v in pairs(moduleMethods) do table[k] = v end
 	table.cache = {}
 	table.containers = {}
+	tinsert(self.modulesSorted, name)
 end
 
 function addon:SelectModule(moduleName)
@@ -195,4 +200,25 @@ function addon:GetCharacters(realm)
 		tinsert(chars, 1, myCharacter)
 	end
 	return chars
+end
+
+function addon:DeleteCharacter(character)
+	local accountKey, realmKey, charKey = strsplit(".", character)
+	DataStore:DeleteCharacter(charKey, realmKey, accountKey)
+	if character == self:GetSelectedCharacter() then
+		self:SelectCharacter(DataStore:GetCharacter())
+	end
+	self:GetModule("All").cache[character] = nil
+	self:ClearSearchResultsCache()
+	-- character array for this realm will need to be rebuilt
+	sortedCharacters[realmKey] = nil
+end
+
+function addon:DeleteGuild(guild)
+	local accountKey, realmKey, guildKey = strsplit(".", guild)
+	DataStore:DeleteGuild(guildKey, realmKey, accountKey)
+	if guild == self:GetSelectedGuild() then
+		self:SelectGuild(DataStore:GetGuild())
+	end
+	self:ClearSearchResultsCache()
 end

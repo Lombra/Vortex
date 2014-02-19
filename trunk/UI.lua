@@ -70,7 +70,7 @@ local function onDisable(self)
 	frame:Show()
 	
 	local module = addon:GetSelectedModule()
-	addon.frame:SetWidth(frame.width or (module.altUI and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
+	addon.frame:SetWidth(frame.width or (not addon.db.useListView and module.altUI and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
 	UpdateUIPanelPositions(addon.frame)
 end
 
@@ -259,6 +259,9 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 	if not addon.db.tooltip then
 		return
 	end
+	if addon.db.tooltipModifier and not IsModifierKeyDown() then
+		return
+	end
 	tooltipInfoAdded = true
 	local itemName, itemLink = self:GetItem()
 	local itemID = itemLink and tonumber(itemLink:match("item:(%d+)"))
@@ -281,7 +284,7 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 		for guild, guildKey in pairs(DataStore:GetGuilds()) do
 			local count = DataStore:GetGuildBankItemCount(guildKey, itemID)
 			if count > 0 then
-				self:AddLine("|cffffffff"..count.."|r <"..guild..">")
+				self:AddLine("|cffffffff"..count.."|r |cff56a3ff<"..guild..">")
 				numChars = numChars + 1
 			end
 			total = total + count
@@ -375,7 +378,7 @@ local itemButtonMethods = {
 				local icon, link, size = DataStore:GetContainerInfo(addon:GetSelectedCharacter(), self:GetID())
 				_G[bag:GetName().."Name"]:SetText(link and GetItemInfo(link) or BACKPACK_TOOLTIP)
 				SetPortraitToTexture(_G[bag:GetName().."Portrait"], icon)
-				addon:UpdateContainer(self:GetID(), addon:GetSelectedCharacter(), bag.buttons)
+				addon:UpdateContainer(self:GetID(), addon:GetSelectedCharacter())
 			end
 			self:SetChecked(not isOpen)
 		elseif self.item then
@@ -459,11 +462,10 @@ function addon:CreateBagButton(parent)
 	return button
 end
 
-function addon:UpdateContainer(container, character, buttons)
-	buttons = buttons or self:GetContainerButtons(container, buttons)
+function addon:UpdateContainer(container, character)
 	local bag = DataStore:GetContainer(character, container)
-	for i = 1, DataStore:GetContainerSize(character, container) do
-		buttons[i]:SetItem(DataStore:GetSlotInfo(bag, buttons[i]:GetID()))
+	for i, button in ipairs(self:GetContainerButtons(container)) do
+		button:SetItem(DataStore:GetSlotInfo(bag, button:GetID()))
 	end
 end
 
@@ -484,7 +486,7 @@ function addon:IsBagOpen(id)
 end
 
 function addon:CloseAllContainers()
-	for i, frame in ipairs(bagFrames) do
+	for i, frame in pairs(bagFrames) do
 		frame:Hide()
 	end
 end
