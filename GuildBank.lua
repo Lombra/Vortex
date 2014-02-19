@@ -12,6 +12,8 @@ frame:SetScript("OnShow", function(self)
 	local myGuild = GetGuildInfo("player")
 	if not selectedGuild and myGuild and DataStore:GetGuildBankMoney(DataStore:GetGuild()) then
 		addon:SelectGuild(DataStore:GetGuild())
+	else
+		addon:SelectGuild()
 	end
 end)
 frame:SetScript("OnEvent", function(self, event, ...)
@@ -214,7 +216,6 @@ local button = Libra:CreateDropdown(frame, true)
 button:SetWidth(128)
 button:SetPoint("TOPLEFT", -2, -27)
 button:JustifyText("LEFT")
-button:SetText("Select guild")
 button.initialize = function(self, level)
 	wipe(sortedGuilds)
 	local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
@@ -233,7 +234,6 @@ button.initialize = function(self, level)
 		info.text = guildName
 		info.func = onClick
 		info.arg1 = guildKey
-		-- info.checked = guildKey == addon:GetSelectedCharacter()
 		info.checked = guildKey == selectedGuild
 		info.disabled = not DataStore:GetGuildBankFaction(guildKey)
 		UIDropDownMenu_AddButton(info, level)
@@ -249,7 +249,6 @@ button.initialize = function(self, level)
 		for i, realm in ipairs(sortedGuilds) do
 			local info = UIDropDownMenu_CreateInfo()
 			info.text = realm
-			-- info.func = onClick
 			info.notCheckable = true
 			info.hasArrow = true
 			info.keepShownOnClick = true
@@ -300,7 +299,7 @@ local function UpdateGuildBank()
 	tabs[selectedTab].button:SetChecked(true)
 	title:SetText(DataStore:GetGuildBankTabName(selectedGuild, selectedTab))
 	titleBg:SetWidth(title:GetWidth() + 20)
-	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild))
+	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild) or 0)
 	Find(searchBox:GetText())
 end
 
@@ -311,8 +310,12 @@ function addon:SelectGuild(guild)
 	selectedGuild = guild
 	selectedTab = 1
 	UpdateGuildBank()
-	local accountKey, realmKey, guildKey = strsplit(".", guild)
-	button:SetText(guildKey)
+	local accountKey, realmKey, guildKey = strsplit(".", guild or "")
+	button:SetText(guildKey or "Select guild")
+end
+
+function addon:GetSelectedGuild()
+	return selectedGuild
 end
 
 local function onClick(self)
