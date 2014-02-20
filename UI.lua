@@ -1,4 +1,4 @@
-local addonName, addon = ...
+local addonName, Vortex = ...
 
 local Libra = LibStub("Libra")
 local LII = LibStub("LibItemInfo")
@@ -6,29 +6,23 @@ local LIB = LibStub("LibItemButton")
 
 local myCharacter
 local myRealm = GetRealmName()
-
-local widgetIndex = 1
-local function getWidgetName()
-	local name = addonName.."Widget"..widgetIndex
-	widgetIndex = widgetIndex + 1
-	return name
-end
+local myFaction = UnitFactionGroup("player")
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 
 local frame = Libra:CreateUIPanel(addonName.."Frame")
-addon.frame = frame
+Vortex.frame = frame
 frame:SetWidth(PANEL_DEFAULT_WIDTH + LIST_PANEL_WIDTH)
 frame:SetPoint("CENTER")
 frame:SetToplevel(true)
 frame:EnableMouse(true)
+frame:HidePortrait()
+frame:HideButtonBar()
 frame:SetTitleText("Vortex")
-frame:HidePortrait(frame)
-frame:HideButtonBar(frame)
 frame:SetScript("OnShow", function(self)
 	PlaySound("igCharacterInfoOpen")
 	if not PanelTemplates_GetSelectedTab(self) then
-		addon:SelectModule(addon.db.defaultModule or "All")
+		Vortex:SelectModule(Vortex.db.defaultModule or "All")
 		PanelTemplates_SetTab(self, 1)
 	end
 end)
@@ -41,11 +35,11 @@ frame.Inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET + LIST_PANEL_WIDTH, PANE
 frame.list = CreateFrame("Frame", nil, frame.Inset)
 frame.list:SetAllPoints()
 -- frame.list:Hide()
-frame.list:SetFrameLevel(frame.Inset:GetFrameLevel() + 1)
+-- frame.list:SetFrameLevel(frame.Inset:GetFrameLevel() + 1)
 
 frame.ui = CreateFrame("Frame", nil, frame.Inset)
 frame.ui:SetAllPoints()
-frame.ui:Hide()
+-- frame.ui:Hide()
 
 local inset = CreateFrame("Frame", nil, frame, "InsetFrameTemplate")
 inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET, PANEL_INSET_ATTIC_OFFSET)
@@ -69,9 +63,9 @@ local function onDisable(self)
 	local frame = self.frame
 	frame:Show()
 	
-	local module = addon:GetSelectedModule()
-	addon.frame:SetWidth(frame.width or (not addon.db.useListView and module.altUI and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
-	UpdateUIPanelPositions(addon.frame)
+	local module = Vortex:GetSelectedModule()
+	Vortex.frame:SetWidth(frame.width or (not Vortex.db.useListView and module.altUI and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
+	UpdateUIPanelPositions(Vortex.frame)
 end
 
 local function createTab()
@@ -104,21 +98,16 @@ guildTab.frame:Hide()
 guildTab.frame.width = 750
 frame.guild = guildTab.frame
 
-local Prototype = addon.prototype
-
-local currentHighlight
-
 local function onClick(self)
-	if addon.isSearching then
-		addon:StopSearch()
+	if Vortex.isSearching then
+		Vortex:StopSearch()
 	end
-	addon:SelectModule(self.module)
+	Vortex:SelectModule(self.module)
 end
 
 local buttons = {}
-addon.moduleButtons = buttons
 
-function addon:CreateUI(name, label)
+function Vortex:CreateUI(name, label)
 	local button = CreateFrame("Button", nil, inset)
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	button:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
@@ -145,7 +134,7 @@ function addon:CreateUI(name, label)
 	buttons[i] = button
 end
 
--- function addon:GetSelectedTab()
+-- function Vortex:GetSelectedTab()
 	-- return self:GetModule(currentHighlight.module)
 -- end
 
@@ -168,21 +157,21 @@ local ItemInfo = setmetatable({}, {
 		return object
 	end
 })
-addon.ItemInfo = ItemInfo
+Vortex.ItemInfo = ItemInfo
 
 local doUpdateList
 local doUpdateUI
 
-LII.RegisterCallback(addon, "GetItemInfoReceivedAll", function()
+LII.RegisterCallback(Vortex, "GetItemInfoReceivedAll", function()
 	if doUpdateList then
 		doUpdateList = nil
-		addon:UpdateList()
+		Vortex:UpdateList()
 	end
 	if doUpdateUI then
 		doUpdateUI = nil
-		local module = addon:GetSelectedModule()
+		local module = Vortex:GetSelectedModule()
 		if module.uiSearch then
-			module:uiSearch(addon:GetFilter("name"))
+			module:uiSearch(Vortex:GetFilter("name"))
 		end
 	end
 end)
@@ -221,14 +210,18 @@ end
 -- ITEM_BIND_TO_BNETACCOUNT = "Binds to Battle.net account";
 -- ITEM_BNETACCOUNTBOUND = "Battle.net Account Bound";
 
+local TOOLTIP_LINE_CHARACTER = "|cffffffff%d|r %s %s"
+local TOOLTIP_LINE_CHARACTER_REALM = "|cffffffff%d|r %s - %s %s"
+local TOOLTIP_LINE_GUILD = "|cffffffff%d|r |cff56a3ff<%s>"
+
 local function getItem(tooltip, item, realm)
 	local realmTotal = 0
 	local realmNumChars = 0
-	for i, character in ipairs(addon:GetCharacters(realm)) do
+	for i, character in ipairs(Vortex:GetCharacters(realm)) do
 		local _, _, charKey = strsplit(".", character)
 		local where = "("
 		local count = 0
-		for k, module in addon:IterateModules() do
+		for k, module in Vortex:IterateModules() do
 			if not module.noSearch then
 				local moduleCount = module:GetItemCount(character, item) or 0
 				if moduleCount > 0 then
@@ -238,10 +231,11 @@ local function getItem(tooltip, item, realm)
 			end
 		end
 		if count > 0 then
+			where = gsub(where, ", $", ")")
 			if realm then
-				tooltip:AddLine("|cffffffff"..count.."|r "..charKey.." - "..realm.." "..gsub(where, ", $", ")"))
+				tooltip:AddLine(format(TOOLTIP_LINE_CHARACTER_REALM, count, charKey, realm, where))
 			else
-				tooltip:AddLine("|cffffffff"..count.."|r "..charKey.." "..gsub(where, ", $", ")"))
+				tooltip:AddLine(format(TOOLTIP_LINE_CHARACTER, count, charKey, where))
 			end
 			realmNumChars = realmNumChars + 1
 		end
@@ -256,10 +250,10 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 	if tooltipInfoAdded then
 		return
 	end
-	if not addon.db.tooltip then
+	if not Vortex.db.tooltip then
 		return
 	end
-	if addon.db.tooltipModifier and not IsModifierKeyDown() then
+	if Vortex.db.tooltipModifier and not IsModifierKeyDown() then
 		return
 	end
 	tooltipInfoAdded = true
@@ -271,7 +265,7 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 		return
 	end
 	local total, numChars = getItem(self, itemID)
-	if addon.db.tooltipBNet and isBNetBoundItem(itemID) then
+	if Vortex.db.tooltipBNet and isBNetBoundItem(itemID) then
 		for realm in pairs(DataStore:GetRealms()) do
 			if realm ~= myRealm then
 				local realmTotal, realmNumChars = getItem(self, itemID, realm)
@@ -280,11 +274,11 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 			end
 		end
 	end
-	if addon.db.tooltipGuild then
+	if Vortex.db.tooltipGuild then
 		for guild, guildKey in pairs(DataStore:GetGuilds()) do
 			local count = DataStore:GetGuildBankItemCount(guildKey, itemID)
 			if count > 0 then
-				self:AddLine("|cffffffff"..count.."|r |cff56a3ff<"..guild..">")
+				self:AddLine(format(TOOLTIP_LINE_GUILD, count, guild))
 				numChars = numChars + 1
 			end
 			total = total + count
@@ -310,7 +304,7 @@ function GameTooltip_OnTooltipAddMoney(self, cost, maxcost)
 end
 
 do
-	local All = addon:NewModule("All", {
+	local All = Vortex:NewModule("All", {
 		label = "All items",
 		noSearch = true,
 	})
@@ -318,7 +312,7 @@ do
 	function All:BuildList(character)
 		local added = {}
 		local list = {}
-		for k, module in addon:IterateModules() do
+		for k, module in Vortex:IterateModules() do
 			if not module.noSearch then
 				for i, v in ipairs(module:GetList(character)) do
 					local item = v.link or v.id
@@ -338,13 +332,11 @@ do
 	end
 end
 
-local scrollFrame
-
 local bagFrames = {}
 local containerButtons = {}
 
 frame:SetScript("OnHide", function(self)
-	addon:CloseAllContainers()
+	Vortex:CloseAllContainers()
 end)
 
 local itemButtonMethods = {
@@ -370,15 +362,15 @@ local itemButtonMethods = {
 		if self.isBag then
 			if not self.item and self:GetID() ~= 0 then return end
 			local bag = bagFrames[self:GetID()]
-			local isOpen = addon:IsBagOpen(self:GetID())
+			local isOpen = Vortex:IsBagOpen(self:GetID())
 			if isOpen then
 				bag:Hide()
 			else
 				ContainerFrame_GenerateFrame(bag, self.size, self:GetID())
-				local icon, link, size = DataStore:GetContainerInfo(addon:GetSelectedCharacter(), self:GetID())
+				local icon, link, size = DataStore:GetContainerInfo(Vortex:GetSelectedCharacter(), self:GetID())
 				_G[bag:GetName().."Name"]:SetText(link and GetItemInfo(link) or BACKPACK_TOOLTIP)
 				SetPortraitToTexture(_G[bag:GetName().."Portrait"], icon)
-				addon:UpdateContainer(self:GetID(), addon:GetSelectedCharacter())
+				Vortex:UpdateContainer(self:GetID(), Vortex:GetSelectedCharacter())
 			end
 			self:SetChecked(not isOpen)
 		elseif self.item then
@@ -437,7 +429,7 @@ local itemButtonMethods = {
 	end,
 }
 
-function addon:SetupItemButton(button)
+function Vortex:SetupItemButton(button)
 	for k, v in pairs(itemButtonMethods) do
 		button[k] = v
 	end
@@ -447,14 +439,14 @@ function addon:SetupItemButton(button)
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 end
 
-function addon:CreateItemButton(parent)
+function Vortex:CreateItemButton(parent)
 	local button = CreateFrame("Button", nil, parent, "ItemButtonTemplate")
 	self:SetupItemButton(button)
 	LIB:RegisterButton(button)
 	return button
 end
 
-function addon:CreateBagButton(parent)
+function Vortex:CreateBagButton(parent)
 	local button = CreateFrame("CheckButton", nil, parent, "ItemButtonTemplate")
 	button:SetCheckedTexture([[Interface\Buttons\CheckButtonHilight]])
 	button.isBag = true
@@ -462,30 +454,30 @@ function addon:CreateBagButton(parent)
 	return button
 end
 
-function addon:UpdateContainer(container, character)
+function Vortex:UpdateContainer(container, character)
 	local bag = DataStore:GetContainer(character, container)
 	for i, button in ipairs(self:GetContainerButtons(container)) do
 		button:SetItem(DataStore:GetSlotInfo(bag, button:GetID()))
 	end
 end
 
-function addon:RegisterContainerButtons(container, buttons)
+function Vortex:RegisterContainerButtons(container, buttons)
 	containerButtons[container] = buttons
 end
 
-function addon:GetContainerButtons(container)
+function Vortex:GetContainerButtons(container)
 	return containerButtons[container]
 end
 
-function addon:GetContainerFrame(id)
+function Vortex:GetContainerFrame(id)
 	return bagFrames[id]
 end
 
-function addon:IsBagOpen(id)
+function Vortex:IsBagOpen(id)
 	return bagFrames[id]:IsShown()
 end
 
-function addon:CloseAllContainers()
+function Vortex:CloseAllContainers()
 	for i, frame in pairs(bagFrames) do
 		frame:Hide()
 	end
@@ -496,7 +488,7 @@ local function onEnter(self)
 	if self:GetID() == 0 then
 		GameTooltip:SetText(BACKPACK_TOOLTIP, 1.0, 1.0, 1.0)
 	else
-		local icon, link, size, freeslots = DataStore:GetContainerInfo(addon:GetSelectedCharacter(), self:GetID())
+		local icon, link, size, freeslots = DataStore:GetContainerInfo(Vortex:GetSelectedCharacter(), self:GetID())
 		GameTooltip:SetHyperlink(link)
 	end
 end
@@ -505,7 +497,7 @@ local function onShow(self)
 	ContainerFrame1.bags[ContainerFrame1.bagsShown + 1] = self:GetName()
 	ContainerFrame1.bagsShown = ContainerFrame1.bagsShown + 1
 	PlaySound("igBackPackOpen")
-	addon:SearchContainer(self:GetID())
+	Vortex:SearchContainer(self:GetID())
 end
 
 local function onHide(self)
@@ -529,7 +521,7 @@ for i = 0, 11 do
 	bag.buttons = {}
 	for slot = 1, 36 do
 		local button = _G[frameName.."Item"..slot]
-		addon:SetupItemButton(button)
+		Vortex:SetupItemButton(button)
 		button:RegisterForDrag(nil)
 		button:SetScript("OnHide", nil)
 		button:SetScript("OnDragStart", nil)
@@ -540,7 +532,7 @@ for i = 0, 11 do
 		_G[frameName.."Item"..slot.."NewItemTexture"]:Hide()
 		bag.buttons[slot] = button
 	end
-	addon:RegisterContainerButtons(i, bag.buttons)
+	Vortex:RegisterContainerButtons(i, bag.buttons)
 end
 
 do
@@ -549,7 +541,7 @@ do
 	
 	local function createButton(frame)
 		local button = CreateFrame("Button", nil, frame)
-		addon:SetupItemButton(button)
+		Vortex:SetupItemButton(button)
 		button.x = 28
 		button:SetHeight(BUTTON_HEIGHT)
 		button:SetPoint("RIGHT", -5, 0)
@@ -594,7 +586,7 @@ do
 			button.icon:SetTexture(GetItemIcon(object.id) or item.icon)
 			if item then
 				local r, g, b = GetItemQualityColor(item.quality)
-				local buttonHeight, owners, count = addon:GetItemSearchResultText(object.id)
+				local buttonHeight, owners, count = Vortex:GetItemSearchResultText(object.id)
 				local count = count or object.count
 				if (count and count > 1) then
 					button.label:SetFormattedText("%s |cffffffff(%d)|r", item.name, count)
@@ -621,7 +613,7 @@ do
 	end
 	
 	local function update(self)
-		local list = addon:GetList()
+		local list = Vortex:GetList()
 		local offset = HybridScrollFrame_GetOffset(self)
 		local buttons = self.buttons
 		local numButtons = #buttons
@@ -637,14 +629,14 @@ do
 				button.label:SetPoint("TOPLEFT", button.icon, "TOPRIGHT", 4, 0)
 				button.source:SetPoint("TOPLEFT", button.icon, "RIGHT", 6, -2)
 				button.item = nil
-				local selectedModule = addon:GetSelectedModule()
-				if not addon.isSearching and selectedModule.UpdateButton then
+				local selectedModule = Vortex:GetSelectedModule()
+				if not Vortex.isSearching and selectedModule.UpdateButton then
 					button.icon:SetTexture(nil)
 					button:SetHeight(BUTTON_HEIGHT)
 					selectedModule:UpdateButton(button, object)
 				else
 					updateButton(button, object)
-					if not addon.isSearching and selectedModule and selectedModule.OnButtonUpdate then
+					if not Vortex.isSearching and selectedModule and selectedModule.OnButtonUpdate then
 						selectedModule:OnButtonUpdate(button, object)
 					end
 				end
@@ -655,10 +647,10 @@ do
 		local totalHeight = #list * self.buttonHeight
 		local displayedHeight = numButtons * self.buttonHeight
 		
-		if addon.isSearching then
+		if Vortex.isSearching then
 			totalHeight = 0
 			for i, item in ipairs(list) do
-				totalHeight = totalHeight + addon:GetItemSearchResultText(item.id or item.link)
+				totalHeight = totalHeight + Vortex:GetItemSearchResultText(item.id or item.link)
 			end
 			displayedHeight = displayedHeight - 20
 		end
@@ -666,8 +658,8 @@ do
 		HybridScrollFrame_Update(self, totalHeight, displayedHeight)
 	end
 	
-	local name = getWidgetName()
-	scrollFrame = CreateFrame("ScrollFrame", name, frame.list, "HybridScrollFrameTemplate")
+	local name = "VortexItemListScrollFrame"
+	local scrollFrame = CreateFrame("ScrollFrame", name, frame.list, "HybridScrollFrameTemplate")
 	scrollFrame:SetPoint("TOP", frame.Inset, 0, -4)
 	scrollFrame:SetPoint("LEFT", frame.Inset, 4, 0)
 	scrollFrame:SetPoint("BOTTOMRIGHT", frame.Inset, -23, 4)
@@ -675,7 +667,7 @@ do
 		update(scrollFrame)
 	end
 	_G[name] = nil
-	addon.scroll = scrollFrame
+	Vortex.scroll = scrollFrame
 	
 	local scrollBar = CreateFrame("Slider", nil, scrollFrame, "HybridScrollBarTemplate")
 	scrollBar:ClearAllPoints()
@@ -700,7 +692,7 @@ do
 end
 
 local function onClick(self, characterKey)
-	addon:SelectCharacter(characterKey)
+	Vortex:SelectCharacter(characterKey)
 	CloseDropDownMenus()
 end
 
@@ -709,13 +701,13 @@ button:SetWidth(96)
 button:JustifyText("LEFT")
 button:SetPoint("TOPLEFT", frame, 0, -29)
 button.initialize = function(self, level)
-	for i, characterKey in ipairs(addon:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
+	for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 		local accountKey, realmKey, characterName = strsplit(".", characterKey)
 		local info = UIDropDownMenu_CreateInfo()
 		info.text = characterName
 		info.func = onClick
 		info.arg1 = characterKey
-		info.checked = characterKey == addon:GetSelectedCharacter()
+		info.checked = characterKey == Vortex:GetSelectedCharacter()
 		UIDropDownMenu_AddButton(info, level)
 	end
 	local sortedRealms = {}
@@ -736,18 +728,18 @@ button.initialize = function(self, level)
 		end
 	end
 end
-addon.characterMenu = button
+Vortex.characterMenu = button
 
 
 local empty = {}
 
-function addon:SetList(list)
+function Vortex:SetList(list)
 	self.list = list or empty
 	self.filteredList = nil
 	self:UpdateList()
 end
 
-function addon:GetList(getRaw)
+function Vortex:GetList(getRaw)
 	return not getRaw and self.filteredList or self.list
 end
 
@@ -770,20 +762,24 @@ local function listSort(a, b)
 	end
 end
 
-addon.defaultSort = listSort
+Vortex.defaultSort = listSort
 
-function addon:UpdateList()
+function Vortex:UpdateList()
 	local module = self:GetSelectedModule()
 	if not module.noSort then
-		sort(self:GetList(), not addon.isSearching and module.sort or listSort)
+		sort(self:GetList(), not self.isSearching and module.sort or listSort)
 	end
 	self:UpdateScrollFrame()
 end
 
-function addon:UpdateScrollFrame()
-	scrollFrame:update()
+function Vortex:UpdateScrollFrame()
+	self.scroll:update()
 end
 
-function addon:QueueListUpdate()
+function Vortex:QueueListUpdate()
 	doUpdateList = true
+end
+
+function Vortex:QueueUIUpdate()
+	doUpdateUI = true
 end

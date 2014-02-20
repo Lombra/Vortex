@@ -1,9 +1,11 @@
-local addonName, addon = ...
+local addonName, Vortex = ...
 
 local Libra = LibStub("Libra")
 local LIB = LibStub("LibItemButton")
 
-local frame = addon.frame.guild
+local ItemInfo = Vortex.ItemInfo
+
+local frame = Vortex.frame.guild
 
 local selectedGuild
 local selectedTab
@@ -11,9 +13,9 @@ local selectedTab
 frame:SetScript("OnShow", function(self)
 	local myGuild = GetGuildInfo("player")
 	if not selectedGuild and myGuild and DataStore:GetGuildBankMoney(DataStore:GetGuild()) then
-		addon:SelectGuild(DataStore:GetGuild())
+		Vortex:SelectGuild(DataStore:GetGuild())
 	else
-		addon:SelectGuild()
+		Vortex:SelectGuild()
 	end
 end)
 frame:SetScript("OnEvent", function(self, event, ...)
@@ -41,7 +43,7 @@ local function OnGuildBankFrameOpened()
 	end
 end
 
--- hooksecurefunc(addon, "OnInitialize", function(self)
+-- hooksecurefunc(Vortex, "OnInitialize", function(self)
 	-- self:RegisterEvent("GUILDBANKFRAME_OPENED", OnGuildBankFrameOpened)
 -- end)
 
@@ -66,7 +68,7 @@ for i = 1, 7 do
 	
 	local c = i - 1
 	for i = 1, 14 do
-		local button = addon:CreateItemButton(frame)
+		local button = Vortex:CreateItemButton(frame)
 		if i == 1 then
 			button:SetPoint("TOPLEFT", column, 7, -3)
 		elseif i % 7 == 1 then
@@ -181,143 +183,6 @@ MoneyFrame_SetType(moneyFrame, "STATIC")
 
 local tabs = {}
 
-local ItemInfo = addon.ItemInfo
-
-local function Find(text)
-	for i = 1, 8 do
-		local tab = DataStore:GetGuildBankTab(selectedGuild, i)
-		tabs[i].button.searchOverlay:Show()
-		for j = 1, 98 do
-			local button = buttons[j]
-			local itemID, itemLink = DataStore:GetSlotInfo(tab, j)
-			local item = (itemID or itemLink) and ItemInfo[itemID or itemLink]
-			local match = text == "" or text == SEARCH or (item and strfind(item.name:lower(), text:lower(), nil, true))
-			if i == selectedTab then
-				button.searchOverlay:SetShown((itemID or itemLink) and not match)
-				if (itemID or itemLink) and match then
-					tabs[i].button.searchOverlay:Hide()
-				end
-			elseif match then
-				tabs[i].button.searchOverlay:Hide()
-				break
-			end
-		end
-	end
-end
-
-local function onClick(self, guildKey)
-	addon:SelectGuild(guildKey)
-	CloseDropDownMenus()
-end
-
-local sortedGuilds = {}
-
-local button = Libra:CreateDropdown(frame, true)
-button:SetWidth(128)
-button:SetPoint("TOPLEFT", -2, -27)
-button:JustifyText("LEFT")
-button.initialize = function(self, level)
-	wipe(sortedGuilds)
-	local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
-	for guildName, guildKey in pairs(guilds) do
-		if guildKey ~= DataStore:GetGuild() then
-			tinsert(sortedGuilds, guildName)
-		end
-	end
-	sort(sortedGuilds)
-	if level == 1 then
-		tinsert(sortedGuilds, 1, (GetGuildInfo("player")))
-	end
-	for i, guildName in ipairs(sortedGuilds) do
-		local guildKey = guilds[guildName]
-		local info = UIDropDownMenu_CreateInfo()
-		info.text = guildName
-		info.func = onClick
-		info.arg1 = guildKey
-		info.checked = guildKey == selectedGuild
-		info.disabled = not DataStore:GetGuildBankFaction(guildKey)
-		UIDropDownMenu_AddButton(info, level)
-	end
-	if level == 1 then
-		wipe(sortedGuilds)
-		for realm in pairs(DataStore:GetRealms()) do
-			if realm ~= GetRealmName() then
-				tinsert(sortedGuilds, realm)
-			end
-		end
-		sort(sortedGuilds)
-		for i, realm in ipairs(sortedGuilds) do
-			local info = UIDropDownMenu_CreateInfo()
-			info.text = realm
-			info.notCheckable = true
-			info.hasArrow = true
-			info.keepShownOnClick = true
-			UIDropDownMenu_AddButton(info, level)
-		end
-	end
-end
-
-local function onEditFocusLost(self)
-	self:SetFontObject("ChatFontSmall")
-	self:SetTextColor(0.5, 0.5, 0.5)
-end
-
-local function onEditFocusGained(self)
-	self:SetTextColor(1, 1, 1)
-end
-
-local searchBox = Libra:CreateEditbox(frame)
-searchBox:SetSize(128, 20)
-searchBox:SetPoint("TOPRIGHT", -16, -33)
-searchBox:SetFontObject("ChatFontSmall")
-searchBox:SetTextColor(0.5, 0.5, 0.5)
-searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
-searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
-searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
-searchBox:SetScript("OnEscapePressed", function(self)
-	self:SetText("")
-	self:ClearFocus()
-end)
-searchBox:SetScript("OnTextChanged", function(self, isUserInput)
-	if not isUserInput then
-		return
-	end
-	
-	Find(self:GetText())
-end)
-
-local function UpdateGuildBank()
-	for i = 1, 8 do
-		local tabIcon = DataStore:GetGuildBankTabIcon(selectedGuild, i)
-		tabs[i].button.icon:SetTexture(tabIcon)
-		tabs[i]:SetShown(tabIcon ~= nil)
-	end
-	local tab = DataStore:GetGuildBankTab(selectedGuild, selectedTab)
-	for i = 1, 98 do
-		buttons[i]:SetItem(DataStore:GetSlotInfo(tab, i))
-	end
-	tabs[selectedTab].button:SetChecked(true)
-	title:SetText(DataStore:GetGuildBankTabName(selectedGuild, selectedTab))
-	titleBg:SetWidth(title:GetWidth() + 20)
-	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild) or 0)
-	Find(searchBox:GetText())
-end
-
-function addon:SelectGuild(guild)
-	if selectedTab then
-		tabs[selectedTab].button:SetChecked(false)
-	end
-	selectedGuild = guild
-	selectedTab = 1
-	UpdateGuildBank()
-	local accountKey, realmKey, guildKey = strsplit(".", guild or "")
-	button:SetText(guildKey or "Select guild")
-end
-
-function addon:GetSelectedGuild()
-	return selectedGuild
-end
-
 local function onClick(self)
 	if self:GetID() ~= selectedTab then
 		PlaySound("GuildBankOpenBag")
@@ -360,4 +225,137 @@ for i = 1, 8 do
 	tabButton:SetScript("OnLeave", GameTooltip_Hide)
 	tabButton:SetID(i)
 	tab.button = tabButton
+end
+
+local function onClick(self, guildKey)
+	Vortex:SelectGuild(guildKey)
+	CloseDropDownMenus()
+end
+
+local sortedGuilds = {}
+
+local guildMenu = Libra:CreateDropdown(frame, true)
+guildMenu:SetWidth(128)
+guildMenu:SetPoint("TOPLEFT", -2, -27)
+guildMenu:JustifyText("LEFT")
+guildMenu.initialize = function(self, level)
+	wipe(sortedGuilds)
+	local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
+	for guildName, guildKey in pairs(guilds) do
+		if guildKey ~= DataStore:GetGuild() then
+			tinsert(sortedGuilds, guildName)
+		end
+	end
+	sort(sortedGuilds)
+	if level == 1 then
+		tinsert(sortedGuilds, 1, (GetGuildInfo("player")))
+	end
+	for i, guildName in ipairs(sortedGuilds) do
+		local guildKey = guilds[guildName]
+		local info = UIDropDownMenu_CreateInfo()
+		info.text = guildName
+		info.func = onClick
+		info.arg1 = guildKey
+		info.checked = guildKey == selectedGuild
+		info.disabled = not DataStore:GetGuildBankFaction(guildKey)
+		UIDropDownMenu_AddButton(info, level)
+	end
+	if level == 1 then
+		wipe(sortedGuilds)
+		for realm in pairs(DataStore:GetRealms()) do
+			if realm ~= GetRealmName() then
+				tinsert(sortedGuilds, realm)
+			end
+		end
+		sort(sortedGuilds)
+		for i, realm in ipairs(sortedGuilds) do
+			local info = UIDropDownMenu_CreateInfo()
+			info.text = realm
+			info.notCheckable = true
+			info.hasArrow = true
+			info.keepShownOnClick = true
+			UIDropDownMenu_AddButton(info, level)
+		end
+	end
+end
+
+local function filterItems(text)
+	for i = 1, 8 do
+		local tab = DataStore:GetGuildBankTab(selectedGuild, i)
+		tabs[i].button.searchOverlay:Show()
+		for j = 1, 98 do
+			local button = buttons[j]
+			local itemID, itemLink = DataStore:GetSlotInfo(tab, j)
+			local item = (itemID or itemLink) and ItemInfo[itemID or itemLink]
+			local match = text == "" or text == SEARCH or (item and strfind(item.name:lower(), text:lower(), nil, true))
+			if i == selectedTab then
+				button.searchOverlay:SetShown((itemID or itemLink) and not match)
+				if (itemID or itemLink) and match then
+					tabs[i].button.searchOverlay:Hide()
+				end
+			elseif match then
+				tabs[i].button.searchOverlay:Hide()
+				break
+			end
+		end
+	end
+end
+
+local function onEditFocusLost(self)
+	self:SetFontObject("ChatFontSmall")
+	self:SetTextColor(0.5, 0.5, 0.5)
+end
+
+local function onEditFocusGained(self)
+	self:SetTextColor(1, 1, 1)
+end
+
+local searchBox = Libra:CreateEditbox(frame)
+searchBox:SetSize(128, 20)
+searchBox:SetPoint("TOPRIGHT", -16, -33)
+searchBox:SetFontObject("ChatFontSmall")
+searchBox:SetTextColor(0.5, 0.5, 0.5)
+searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
+searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
+searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
+searchBox:SetScript("OnEscapePressed", function(self)
+	self:SetText("")
+	self:ClearFocus()
+end)
+searchBox:SetScript("OnTextChanged", function(self, isUserInput)
+	if isUserInput then
+		filterItems(self:GetText())
+	end
+end)
+
+local function UpdateGuildBank()
+	for i = 1, 8 do
+		local tabIcon = DataStore:GetGuildBankTabIcon(selectedGuild, i)
+		tabs[i].button.icon:SetTexture(tabIcon)
+		tabs[i]:SetShown(tabIcon ~= nil)
+	end
+	local tab = DataStore:GetGuildBankTab(selectedGuild, selectedTab)
+	for i = 1, 98 do
+		buttons[i]:SetItem(DataStore:GetSlotInfo(tab, i))
+	end
+	tabs[selectedTab].button:SetChecked(true)
+	title:SetText(DataStore:GetGuildBankTabName(selectedGuild, selectedTab))
+	titleBg:SetWidth(title:GetWidth() + 20)
+	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild) or 0)
+	filterItems(searchBox:GetText())
+end
+
+function Vortex:SelectGuild(guild)
+	if selectedTab then
+		tabs[selectedTab].button:SetChecked(false)
+	end
+	selectedGuild = guild
+	selectedTab = 1
+	UpdateGuildBank()
+	local accountKey, realmKey, guildKey = strsplit(".", guild or "")
+	guildMenu:SetText(guildKey or "Select guild")
+end
+
+function Vortex:GetSelectedGuild()
+	return selectedGuild
 end

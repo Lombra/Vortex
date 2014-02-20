@@ -1,6 +1,7 @@
-local addonName, addon = ...
-
 local Libra = LibStub("Libra")
+
+local Vortex = Libra:NewAddon(...)
+_G.Vortex = Vortex
 
 local myCharacter = DataStore:GetCharacter()
 local myRealm = GetRealmName()
@@ -9,7 +10,7 @@ BINDING_HEADER_VORTEX = "Vortex"
 BINDING_NAME_VORTEX_TOGGLE = "Toggle Vortex"
 
 SlashCmdList["VORTEX"] = function(msg)
-	ToggleFrame(addon.frame)
+	ToggleFrame(Vortex.frame)
 end
 SLASH_VORTEX1 = "/vortex"
 SLASH_VORTEX2 = "/vx"
@@ -20,21 +21,17 @@ local dataobj = LibStub("LibDataBroker-1.1"):NewDataObject("Vortex", {
 	icon = [[Interface\Icons\Achievement_GuildPerk_MobileBanking]],
 	OnClick = function(self, button)
 		if button == "LeftButton" then
-			ToggleFrame(addon.frame)
+			ToggleFrame(Vortex.frame)
 		else
-			InterfaceOptionsFrame_OpenToCategory(addon.config)
+			InterfaceOptionsFrame_OpenToCategory(Vortex.config)
 		end
 	end,
 	-- OnTooltipShow = function()
-		-- addon:ShowTooltip(k)
+		-- Vortex:ShowTooltip(k)
 	-- end
 })
 
-addon = Libra:NewAddon("Vortex", addon)
-
-addon.modulesSorted = {}
-
-Vortex = addon
+Vortex.modulesSorted = {}
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 
@@ -51,7 +48,7 @@ local defaults = {
 	},
 }
 
-function addon:OnInitialize()
+function Vortex:OnInitialize()
 	self.db = LibStub("AceDB-3.0"):New("VortexDB", defaults)
 	self.db = self.db.global
 	self:LoadSettings()
@@ -62,7 +59,7 @@ function addon:OnInitialize()
 end
 
 local function addUI(self)
-	local ui = CreateFrame("Frame", nil, addon.frame.ui)
+	local ui = CreateFrame("Frame", nil, Vortex.frame.ui)
 	ui:SetAllPoints()
 	ui:Hide()
 	self.ui = ui
@@ -71,7 +68,7 @@ end
 
 local moduleMethods = {
 	Update = function(self, character)
-		addon:UpdateModule(self, character)
+		Vortex:UpdateModule(self, character)
 	end,
 	GetList = function(self, character)
 		if not self.cache[character] then
@@ -81,8 +78,8 @@ local moduleMethods = {
 	end,
 	ClearCache = function(self, character)
 		self.cache[character] = nil
-		addon:GetModule("All").cache[character] = nil
-		addon:ClearSearchResultsCache()
+		Vortex:GetModule("All").cache[character] = nil
+		Vortex:ClearSearchResultsCache()
 	end,
 	IncludeContainer = function(self, containerID)
 		tinsert(self.containers, containerID)
@@ -106,12 +103,12 @@ local moduleMethods = {
 	end,
 	UpdateUI = function(self, character)
 		for i, containerID in ipairs(self.containers) do
-			addon:UpdateContainer(containerID, character)
+			Vortex:UpdateContainer(containerID, character)
 		end
 	end,
 }
 
-function addon:OnModuleCreated(name, table)
+function Vortex:OnModuleCreated(name, table)
 	local module = self:CreateUI(name, table.label)
 	if table.altUI then
 		addUI(table)
@@ -122,7 +119,7 @@ function addon:OnModuleCreated(name, table)
 	tinsert(self.modulesSorted, name)
 end
 
-function addon:SelectModule(moduleName)
+function Vortex:SelectModule(moduleName)
 	local selectedModule = self:GetSelectedModule()
 	local module = self:GetModule(moduleName)
 	if module == selectedModule then
@@ -151,11 +148,11 @@ function addon:SelectModule(moduleName)
 	UpdateUIPanelPositions(self.frame)
 end
 
-function addon:GetSelectedModule()
+function Vortex:GetSelectedModule()
 	return self.selectedModule
 end
 
-function addon:UpdateModule(module, character)
+function Vortex:UpdateModule(module, character)
 	local showList = not module.altUI or self.db.useListView
 	if showList then
 		self:SetList(module:GetList(character))
@@ -165,7 +162,7 @@ function addon:UpdateModule(module, character)
 	end
 end
 
-function addon:SelectCharacter(character)
+function Vortex:SelectCharacter(character)
 	self.selectedCharacter = character
 	local accountKey, realmKey, charKey = strsplit(".", character)
 	self.characterMenu:SetText(charKey)
@@ -176,13 +173,13 @@ function addon:SelectCharacter(character)
 	end
 end
 
-function addon:GetSelectedCharacter()
+function Vortex:GetSelectedCharacter()
 	return self.selectedCharacter
 end
 
 local sortedCharacters = {}
 
-function addon:GetCharacters(realm)
+function Vortex:GetCharacters(realm)
 	realm = realm or myRealm
 	if sortedCharacters[realm] then
 		return sortedCharacters[realm]
@@ -202,7 +199,7 @@ function addon:GetCharacters(realm)
 	return chars
 end
 
-function addon:DeleteCharacter(character)
+function Vortex:DeleteCharacter(character)
 	local accountKey, realmKey, charKey = strsplit(".", character)
 	DataStore:DeleteCharacter(charKey, realmKey, accountKey)
 	if character == self:GetSelectedCharacter() then
@@ -214,7 +211,7 @@ function addon:DeleteCharacter(character)
 	sortedCharacters[realmKey] = nil
 end
 
-function addon:DeleteGuild(guild)
+function Vortex:DeleteGuild(guild)
 	local accountKey, realmKey, guildKey = strsplit(".", guild)
 	DataStore:DeleteGuild(guildKey, realmKey, accountKey)
 	if guild == self:GetSelectedGuild() then
