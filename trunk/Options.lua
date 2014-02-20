@@ -1,11 +1,11 @@
-local addonName, addon = ...
+local addonName, Vortex = ...
 
 local Libra = LibStub("Libra")
 
 local frame = CreateFrame("Frame")
 frame.name = addonName
 InterfaceOptions_AddCategory(frame)
-addon.config = frame
+Vortex.config = frame
 
 local title = frame:CreateFontString(nil, nil, "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", 16, -16)
@@ -17,7 +17,7 @@ title:SetText(frame.name)
 local function onClick(self)
 	local checked = self:GetChecked() ~= nil
 	PlaySound(checked and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
-	addon.db[self.setting] = checked
+	Vortex.db[self.setting] = checked
 	if self.func then
 		self.func()
 	end
@@ -60,9 +60,9 @@ local options = {
 		text = "Use list view",
 		key = "useListView",
 		func = function()
-			if not addon.isSearching then
-				addon:SelectModule(addon:GetSelectedModule().name)
-				addon:CloseAllContainers()
+			if not Vortex.isSearching then
+				Vortex:SelectModule(Vortex:GetSelectedModule().name)
+				Vortex:CloseAllContainers()
 			end
 		end,
 		tooltipText = "Shows all modules as lists instead of their default UI"
@@ -74,7 +74,7 @@ local options = {
 	},
 }
 
-function addon:LoadSettings()
+function Vortex:LoadSettings()
 	for i, option in ipairs(options) do
 		local button = newCheckButton()
 		if i == 1 then
@@ -91,7 +91,7 @@ function addon:LoadSettings()
 	end
 	
 	local function onClick(self, module)
-		addon.db.defaultModule = module
+		Vortex.db.defaultModule = module
 		self.owner:SetText(module)
 	end
 	
@@ -102,12 +102,12 @@ function addon:LoadSettings()
 	defaultModule:SetLabel("Default module")
 	defaultModule:SetText(self.db.defaultModule or "All")
 	defaultModule.initialize = function(self)
-		for i, v in ipairs(addon.modulesSorted) do
+		for i, v in ipairs(Vortex.modulesSorted) do
 			local info = UIDropDownMenu_CreateInfo()
 			info.text = v
 			info.func = onClick
 			info.arg1 = v
-			info.checked = (v == addon.db.defaultModule)
+			info.checked = (v == Vortex.db.defaultModule)
 			info.owner = self
 			self:AddButton(info)
 		end
@@ -120,7 +120,7 @@ function addon:LoadSettings()
 	}
 	
 	local function onClick(self, searchScope)
-		addon.db.defaultSearch = searchScope
+		Vortex.db.defaultSearch = searchScope
 		self.owner:SetText(searchScope)
 	end
 	
@@ -136,7 +136,7 @@ function addon:LoadSettings()
 			info.text = v
 			info.func = onClick
 			info.arg1 = v
-			info.checked = (v == addon.db.defaultSearch)
+			info.checked = (v == Vortex.db.defaultSearch)
 			info.owner = self
 			self:AddButton(info)
 		end
@@ -159,7 +159,7 @@ function addon:LoadSettings()
 	local menu = Libra:CreateDropdown()
 	menu:SetDisplayMode("MENU")
 	menu.initialize = function(self, level)
-		for i, characterKey in ipairs(addon:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
+		for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 			if characterKey ~= DataStore:GetCharacter() then
 				local accountKey, realmKey, characterName = strsplit(".", characterKey)
 				local info = UIDropDownMenu_CreateInfo()
@@ -227,7 +227,7 @@ StaticPopupDialogs["VORTEX_DELETE_CHARACTER"] = {
 	button1 = YES,
 	button2 = NO,
 	OnAccept = function(self, character)
-		addon:DeleteCharacter(character)
+		Vortex:DeleteCharacter(character)
 	end,
 	hideOnEscape = true,
 }
@@ -237,7 +237,7 @@ StaticPopupDialogs["VORTEX_DELETE_GUILD"] = {
 	button1 = YES,
 	button2 = NO,
 	OnAccept = function(self, guild)
-		addon:DeleteGuild(guild)
+		Vortex:DeleteGuild(guild)
 	end,
 	hideOnEscape = true,
 }

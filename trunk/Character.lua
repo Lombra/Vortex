@@ -124,7 +124,7 @@ for i, slot in ipairs(slots) do
 	elseif i == 9 then
 		button:SetPoint("TOPRIGHT", -4, -2)
 	elseif i == 17 then
-		button:SetPoint("BOTTOMLEFT", 130, 16)
+		button:SetPoint("BOTTOMLEFT", 126, 10)
 		button.bg2 = button:CreateTexture(nil, "BACKGROUND", "Char-Slot-Bottom-Left")
 		button.bg2:ClearAllPoints()
 		button.bg2:SetPoint("TOPRIGHT", button, "TOPLEFT", -4, 8)
@@ -162,7 +162,7 @@ for i = 0, 4 do
 	button.bg = textureName
 	-- button.tooltipText = BANK_BAG
 	if i == 0 then
-		button:SetPoint("BOTTOMRIGHT", -12, 36)
+		button:SetPoint("BOTTOMRIGHT", -10, 30)
 	else
 		button:SetPoint("TOPRIGHT", bankFrameBags[i - 1], "TOPLEFT", -6, 0)
 	end

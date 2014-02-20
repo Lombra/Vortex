@@ -1,8 +1,8 @@
-local addonName, addon = ...
+local addonName, Vortex = ...
 
 local Libra = LibStub("Libra")
 
-local ItemInfo = addon.ItemInfo
+local ItemInfo = Vortex.ItemInfo
 
 local myRealm = GetRealmName()
 
@@ -21,29 +21,29 @@ local function onEditFocusLost(self)
 	self:SetFontObject("ChatFontSmall")
 	self:SetTextColor(0.5, 0.5, 0.5)
 	local text = self:GetText()
-	if not addon:GetFilter("name") then
+	if not Vortex:GetFilter("name") then
 		if searchFilter == "UI" then
-			local module = addon:GetSelectedModule()
+			local module = Vortex:GetSelectedModule()
 			module:Search()
-		elseif addon.isSearching then
-			addon:SetList(nil)
+		elseif Vortex.isSearching then
+			Vortex:SetList(nil)
 		end
 	end
 end
 
 local function onEditFocusGained(self)
 	self:SetTextColor(1, 1, 1)
-	if not addon:GetFilter("name") and searchFilter ~= "UI" then
+	if not Vortex:GetFilter("name") and searchFilter ~= "UI" then
 	end
 end
 
 local searchBox = Libra:CreateEditbox(VortexFrameTab1.frame)
 searchBox:SetSize(128, 20)
-searchBox:SetPoint("TOPRIGHT", addon.frame, -16, -33)
+searchBox:SetPoint("TOPRIGHT", Vortex.frame, -16, -33)
 searchBox:SetFontObject("ChatFontSmall")
 searchBox:SetTextColor(0.5, 0.5, 0.5)
 searchBox.clearFunc = function()
-	addon:ClearFilter("name")
+	Vortex:ClearFilter("name")
 end
 searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
 searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
@@ -55,29 +55,29 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	
 	local text = self:GetText()
 	if text ~= "" then
-		addon:SetFilter("name", text:lower())
+		Vortex:SetFilter("name", text:lower())
 		if searchFilter ~= "UI" then
-			addon:Search()
+			Vortex:Search()
 		end
 	else
-		addon:ClearFilter("name")
+		Vortex:ClearFilter("name")
 		if searchFilter ~= "UI" then
-			addon:SetList(nil)
+			Vortex:SetList(nil)
 			return
 		end
 	end
 	
-	local module = addon:GetSelectedModule()
+	local module = Vortex:GetSelectedModule()
 	if searchFilter == "UI" then
-		module:Search(addon:GetFilter("name"))
+		module:Search(Vortex:GetFilter("name"))
 	else
-		local list = addon:GetCache()
-		-- addon:SetList(list) -- don't UpdateList here
-		addon.list = list or empty
-		addon.filteredList = nil
+		local list = Vortex:GetCache()
+		-- Vortex:SetList(list) -- don't UpdateList here
+		Vortex.list = list or empty
+		Vortex.filteredList = nil
 	end
 	
-	addon:ApplyFilters()
+	Vortex:ApplyFilters()
 end)
 
 local searchMenuOptions = {
@@ -88,7 +88,7 @@ local searchMenuOptions = {
 }
 
 local function onClick(self, arg1)
-	addon:SetSearchScope(arg1)
+	Vortex:SetSearchScope(arg1)
 end
 
 local button = Libra:CreateDropdown(VortexFrameTab1.frame, true)
@@ -106,9 +106,9 @@ button.initialize = function(self, level)
 		UIDropDownMenu_AddButton(info, level)
 	end
 end
-addon.searchScopeMenu = button
+Vortex.searchScopeMenu = button
 
-local filterBar = CreateFrame("Frame", nil, addon.frame.list)
+local filterBar = CreateFrame("Frame", nil, Vortex.frame.list)
 filterBar:SetPoint("TOP", 0, -4)
 filterBar:SetPoint("LEFT", 4, 0)
 filterBar:SetPoint("RIGHT", -26, 0)
@@ -137,8 +137,8 @@ filterBar.clear:SetScript("OnClick", function(self)
 	searchBox:SetText(SEARCH)
 	searchBox:ClearFocus()
 	searchBox.clearButton:Hide()
-	addon:ClearFilter("name")
-	addon:StopSearch()
+	Vortex:ClearFilter("name")
+	Vortex:StopSearch()
 end)
 filterBar.clear:SetScript("OnMouseDown", function(self)
 	self:SetPoint("RIGHT", -1, -1)
@@ -159,7 +159,7 @@ local function match(item, searchString)
 	end
 	local item = ItemInfo[item]
 	if not item then
-		doUpdateUI = true
+		Vortex:QueueUIUpdate()
 	end
 	if (item and strfind(lower(item.name), strlower(searchString), nil, true)) then
 		return true, true
@@ -167,13 +167,13 @@ local function match(item, searchString)
 	return false, true
 end
 
-function addon:SearchContainer(containerID, character)
-	local character = addon:GetSelectedCharacter()
+function Vortex:SearchContainer(containerID, character)
+	local character = self:GetSelectedCharacter()
 	local bag = DataStore:GetContainer(character, containerID)
 	local bagFrame = self:GetContainerFrame(containerID)
 	local buttons = self:GetContainerButtons(containerID)
 	local foundInBag
-	local searchString = addon:GetFilter("name")
+	local searchString = self:GetFilter("name")
 	for i = 1, DataStore:GetContainerSize(character, containerID) do
 		local itemID, itemLink = DataStore:GetSlotInfo(bag, bagFrame and bagFrame:IsShown() and buttons[i]:GetID() or i)
 		local match, hasItem = match(itemID or itemLink, searchString)
@@ -194,8 +194,8 @@ end
 local function dynamic(offset)
 	local heightLeft = offset
 	
-	for i, item in ipairs(addon:GetList()) do
-		local buttonHeight = addon:GetItemSearchResultText(item.id or item.link)
+	for i, item in ipairs(Vortex:GetList()) do
+		local buttonHeight = Vortex:GetItemSearchResultText(item.id or item.link)
 		
 		if heightLeft - buttonHeight <= 0 then
 			return i - 1, heightLeft
@@ -206,8 +206,8 @@ local function dynamic(offset)
 end
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
-function addon:Search()
-	addon.isSearching = true
+function Vortex:Search()
+	self.isSearching = true
 	filterBar:Show()
 	filterBar.text:SetText("Searching in "..searchFilter)
 	self.scroll:SetPoint("TOP", filterBar, "BOTTOM")
@@ -216,42 +216,42 @@ function addon:Search()
 	self.frame.list:Show()
 	self.frame:SetWidth(PANEL_DEFAULT_WIDTH + LIST_PANEL_WIDTH)
 	UpdateUIPanelPositions(self.frame)
-	local module = addon:GetSelectedModule()
+	local module = self:GetSelectedModule()
 	module.button.highlight:SetDesaturated(true)
 end
 
-function addon:StopSearch()
-	addon.isSearching = false
+function Vortex:StopSearch()
+	self.isSearching = false
 	filterBar:Hide()
 	self.scroll:SetPoint("TOP", self.frame.Inset, 0, -4)
 	self.scroll.dynamic = nil
 	searchBox:SetText(SEARCH)
 	searchBox:ClearFocus()
 	searchBox.clearButton:Hide()
-	addon:ClearFilter("name")
-	local module = addon:GetSelectedModule()
+	self:ClearFilter("name")
+	local module = self:GetSelectedModule()
 	self:SelectModule(module.name)
 	-- module:Search()
 end
 
-function addon:SetSearchScope(scope)
+function Vortex:SetSearchScope(scope)
 	searchFilter = scope
-	addon:ClearSearchResultsCache()
+	self:ClearSearchResultsCache()
 	button:SetText("|cffffd200Search:|r "..scope)
-	local module = addon:GetSelectedModule()
-	local character = addon:GetSelectedCharacter()
+	local module = self:GetSelectedModule()
+	local character = self:GetSelectedCharacter()
 	if scope ~= "UI" then
-		if addon:GetFilter("name") then
-			addon:Search()
-			local list = addon:GetCache()
-			-- addon:SetList(list) -- don't UpdateList here
-			addon.list = list or empty
-			addon.filteredList = nil
-			addon:ApplyFilters()
+		if self:GetFilter("name") then
+			self:Search()
+			local list = self:GetCache()
+			-- self:SetList(list) -- don't UpdateList here
+			self.list = list or empty
+			self.filteredList = nil
+			self:ApplyFilters()
 		end
 	else
-		addon:StopSearch()
-		module:Search(addon:GetFilter("name"))
+		self:StopSearch()
+		module:Search(self:GetFilter("name"))
 	end
 end
 
@@ -259,7 +259,7 @@ local resultsCache = {} -- list of results passed to SetList
 local searchResults = {} -- details about each item, owners
 
 local function mergeCharacterItems(list, character)
-	local All = addon:GetModule("All")
+	local All = Vortex:GetModule("All")
 	local items = All:GetList(character)
 	for i = 1, #items do
 		local v = items[i]
@@ -277,11 +277,11 @@ local function mergeCharacterItems(list, character)
 end
 
 local function mergeItems(list, realm)
-	local All = addon:GetModule("All")
+	local All = Vortex:GetModule("All")
 	for k, character in pairs(DataStore:GetCharacters(realm)) do
 		mergeCharacterItems(list, character)
 	end
-	if addon.db.searchGuild then
+	if Vortex.db.searchGuild then
 		for k, guild in pairs(DataStore:GetGuilds(realm)) do
 			for i = 1, 8 do
 				local tab = DataStore:GetGuildBankTab(guild, i)
@@ -309,7 +309,7 @@ end
 
 local doUpdateResults = true
 
-function addon:GetCache()
+function Vortex:GetCache()
 	if doUpdateResults then
 		doUpdateResults = nil
 		wipe(resultsCache)
@@ -359,10 +359,10 @@ local c = {}
 local c2 = {}
 local c3 = {}
 
-local dummy = addon.frame:CreateFontString(nil, nil, "GameFontHighlightSmallLeft")
+local dummy = Vortex.frame:CreateFontString(nil, nil, "GameFontHighlightSmallLeft")
 dummy:SetSpacing(1)
 
-function addon:GetItemSearchResultText(item)
+function Vortex:GetItemSearchResultText(item)
 	if not self.isSearching then
 		return BUTTON_HEIGHT + BUTTON_OFFSET
 	end
@@ -402,24 +402,24 @@ function addon:GetItemSearchResultText(item)
 	return buttonHeight, owners, total
 end
 
-function addon:ClearSearchResultsCache()
+function Vortex:ClearSearchResultsCache()
 	doUpdateResults = true
 	wipe(c)
 	wipe(c2)
 	wipe(c3)
 end
 
-addon.filterArgs = {}
+Vortex.filterArgs = {}
 
 local function FilterApproves(itemID)
-	local filterArg = addon:GetFilter("name")
+	local filterArg = Vortex:GetFilter("name")
 	if not filterArg then
 		return true
 	end
 	if not itemID then return end
 	local item = ItemInfo[itemID]
 	if not item then
-		addon:QueueListUpdate()
+		Vortex:QueueListUpdate()
 		return
 	end
 	return strfind(strlower(item.name), filterArg, nil, true) ~= nil
@@ -427,7 +427,7 @@ end
 
 local filteredList = {}
 
-function addon:ApplyFilters()
+function Vortex:ApplyFilters()
 	local t = debugprofilestop()
 	wipe(filteredList)
 	for i, v in ipairs(self:GetList(true)) do
@@ -439,24 +439,24 @@ function addon:ApplyFilters()
 	self:SetFilteredList(filteredList)
 end
 
-function addon:SetFilter(filter, arg)
+function Vortex:SetFilter(filter, arg)
 	self.filterArgs[filter] = arg
 end
 
-function addon:GetFilter(filter)
+function Vortex:GetFilter(filter)
 	return self.filterArgs[filter]
 end
 
-function addon:ClearFilter(filter)
+function Vortex:ClearFilter(filter)
 	self.filterArgs[filter] = nil
 end
 
-function addon:SetFilteredList(list)
+function Vortex:SetFilteredList(list)
 	self.filteredList = list
 	self:UpdateList()
 end
 
-function addon:ClearFilters()
+function Vortex:ClearFilters()
 	wipe(self.filterArgs)
 	self.filteredList = nil
 	-- self:UpdateList()
