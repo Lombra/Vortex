@@ -1,7 +1,7 @@
 local addonName, Vortex = ...
 
 local Libra = LibStub("Libra")
-local LII = LibStub("LibItemInfo")
+local LII = LibStub("LibItemInfo-1.0")
 local LIB = LibStub("LibItemButton")
 
 local myCharacter
@@ -162,7 +162,7 @@ Vortex.ItemInfo = ItemInfo
 local doUpdateList
 local doUpdateUI
 
-LII.RegisterCallback(Vortex, "GetItemInfoReceivedAll", function()
+LII.RegisterCallback(Vortex, "OnItemInfoReceivedBatch", function()
 	if doUpdateList then
 		doUpdateList = nil
 		Vortex:UpdateList()
