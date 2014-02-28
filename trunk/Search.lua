@@ -18,8 +18,6 @@ local gsub = gsub
 local strsplit = strsplit
 
 local function onEditFocusLost(self)
-	self:SetFontObject("ChatFontSmall")
-	self:SetTextColor(0.5, 0.5, 0.5)
 	local text = self:GetText()
 	if not Vortex:GetFilter("name") then
 		if searchFilter == "UI" then
@@ -32,21 +30,18 @@ local function onEditFocusLost(self)
 end
 
 local function onEditFocusGained(self)
-	self:SetTextColor(1, 1, 1)
 	if not Vortex:GetFilter("name") and searchFilter ~= "UI" then
 	end
 end
 
-local searchBox = Libra:CreateEditbox(VortexFrameTab1.frame)
-searchBox:SetSize(128, 20)
+local searchBox = Libra:CreateEditbox(VortexFrameTab1.frame, true)
+searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", Vortex.frame, -16, -33)
-searchBox:SetFontObject("ChatFontSmall")
-searchBox:SetTextColor(0.5, 0.5, 0.5)
 searchBox.clearFunc = function()
 	Vortex:ClearFilter("name")
 end
 searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
-searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
+-- searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
 searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
 searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	if not isUserInput then
@@ -91,7 +86,7 @@ local function onClick(self, arg1)
 	Vortex:SetSearchScope(arg1)
 end
 
-local button = Libra:CreateDropdown(VortexFrameTab1.frame, true)
+local button = Libra:CreateDropdown("Frame", VortexFrameTab1.frame)
 button:SetWidth(128)
 button:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
 button:SetText("|cffffd200Search:|r "..searchFilter)

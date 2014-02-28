@@ -1,7 +1,5 @@
 local addonName, Vortex = ...
 
-local Libra = LibStub("Libra")
-
 local frame = CreateFrame("Frame")
 frame.name = addonName
 InterfaceOptions_AddCategory(frame)
@@ -95,7 +93,7 @@ function Vortex:LoadSettings()
 		self.owner:SetText(module)
 	end
 	
-	local defaultModule = Libra:CreateDropdown(frame, true)
+	local defaultModule = Vortex:CreateDropdown("Frame", frame)
 	defaultModule:SetWidth(128)
 	defaultModule:SetPoint("TOPLEFT", options[#options].button, "BOTTOMLEFT", -12, -24)
 	defaultModule:JustifyText("LEFT")
@@ -124,7 +122,7 @@ function Vortex:LoadSettings()
 		self.owner:SetText(searchScope)
 	end
 	
-	local defaultSearch = Libra:CreateDropdown(frame, true)
+	local defaultSearch = Vortex:CreateDropdown("Frame", frame)
 	defaultSearch:SetWidth(128)
 	defaultSearch:SetPoint("TOP", defaultModule, "BOTTOM", 0, -16)
 	defaultSearch:JustifyText("LEFT")
@@ -156,8 +154,7 @@ function Vortex:LoadSettings()
 		StaticPopup_Show("VORTEX_DELETE_GUILD", guildKey, realmKey, guild)
 	end
 	
-	local menu = Libra:CreateDropdown()
-	menu:SetDisplayMode("MENU")
+	local menu = Vortex:CreateDropdown("Menu")
 	menu.initialize = function(self, level)
 		for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 			if characterKey ~= DataStore:GetCharacter() then

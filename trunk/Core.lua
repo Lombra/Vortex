@@ -2,6 +2,7 @@ local Libra = LibStub("Libra")
 
 local Vortex = Libra:NewAddon(...)
 _G.Vortex = Vortex
+Libra:EmbedWidgets(Vortex)
 
 local myCharacter = DataStore:GetCharacter()
 local myRealm = GetRealmName()
@@ -144,7 +145,7 @@ function Vortex:SelectModule(moduleName)
 	module:Update(selectedCharacter)
 	self.frame.list:SetShown(showList)
 	self.frame.ui:SetShown(not showList)
-	self.frame:SetWidth((not showList and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
+	self.frame:SetWidth(self:GetSelectedTab() and self:GetSelectedTab().frame.width or (not showList and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
 	UpdateUIPanelPositions(self.frame)
 end
 

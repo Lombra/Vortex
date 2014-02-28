@@ -1,6 +1,5 @@
 local addonName, Vortex = ...
 
-local Libra = LibStub("Libra")
 local LIB = LibStub("LibItemButton")
 
 local ItemInfo = Vortex.ItemInfo
@@ -12,8 +11,10 @@ local selectedTab
 
 frame:SetScript("OnShow", function(self)
 	local myGuild = GetGuildInfo("player")
-	if not selectedGuild and myGuild and DataStore:GetGuildBankMoney(DataStore:GetGuild()) then
-		Vortex:SelectGuild(DataStore:GetGuild())
+	if myGuild and DataStore:GetGuildBankMoney(DataStore:GetGuild()) then
+		if not selectedGuild then
+			Vortex:SelectGuild(DataStore:GetGuild())
+		end
 	else
 		Vortex:SelectGuild()
 	end
@@ -173,6 +174,11 @@ bg:SetTexture([[Interface\GuildBankFrame\GuildVaultBG]], true)
 bg:SetHorizTile(true)
 bg:SetVertTile(true)
 
+local blackBG = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+blackBG:SetPoint("TOPLEFT", tli, 4, -4)
+blackBG:SetPoint("BOTTOMRIGHT", bri, -4, 3)
+blackBG:SetTexture(0, 0, 0)
+
 local moneyFrameBg = CreateFrame("Frame", nil, frame, "ThinGoldEdgeTemplate")
 moneyFrameBg:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 1, 25)
 moneyFrameBg:SetPoint("BOTTOMRIGHT", -4, 2)
@@ -190,7 +196,7 @@ local function onClick(self)
 	tabs[selectedTab].button:SetChecked(false)
 	self:SetChecked(true)
 	selectedTab = self:GetID()
-	UpdateGuildBank()
+	Vortex:UpdateGuildBank()
 end
 
 local function onEnter(self)
@@ -234,7 +240,7 @@ end
 
 local sortedGuilds = {}
 
-local guildMenu = Libra:CreateDropdown(frame, true)
+local guildMenu = Vortex:CreateDropdown("Frame", frame)
 guildMenu:SetWidth(128)
 guildMenu:SetPoint("TOPLEFT", -2, -27)
 guildMenu:JustifyText("LEFT")
@@ -284,39 +290,30 @@ local function filterItems(text)
 		local tab = DataStore:GetGuildBankTab(selectedGuild, i)
 		tabs[i].button.searchOverlay:Show()
 		for j = 1, 98 do
-			local button = buttons[j]
-			local itemID, itemLink = DataStore:GetSlotInfo(tab, j)
-			local item = (itemID or itemLink) and ItemInfo[itemID or itemLink]
-			local match = text == "" or text == SEARCH or (item and strfind(item.name:lower(), text:lower(), nil, true))
-			if i == selectedTab then
-				button.searchOverlay:SetShown((itemID or itemLink) and not match)
-				if (itemID or itemLink) and match then
+			if tab then
+				local button = buttons[j]
+				local itemID, itemLink = DataStore:GetSlotInfo(tab, j)
+				local item = (itemID or itemLink) and ItemInfo[itemID or itemLink]
+				local match = text == "" or text == SEARCH or (item and strfind(item.name:lower(), text:lower(), nil, true))
+				if i == selectedTab then
+					button.searchOverlay:SetShown((itemID or itemLink) and not match)
+					if (itemID or itemLink) and match then
+						tabs[i].button.searchOverlay:Hide()
+					end
+				elseif match then
 					tabs[i].button.searchOverlay:Hide()
+					break
 				end
-			elseif match then
+			else
 				tabs[i].button.searchOverlay:Hide()
-				break
 			end
 		end
 	end
 end
 
-local function onEditFocusLost(self)
-	self:SetFontObject("ChatFontSmall")
-	self:SetTextColor(0.5, 0.5, 0.5)
-end
-
-local function onEditFocusGained(self)
-	self:SetTextColor(1, 1, 1)
-end
-
-local searchBox = Libra:CreateEditbox(frame)
-searchBox:SetSize(128, 20)
+local searchBox = Vortex:CreateEditbox(frame, true)
+searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", -16, -33)
-searchBox:SetFontObject("ChatFontSmall")
-searchBox:SetTextColor(0.5, 0.5, 0.5)
-searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
-searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
 searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
 searchBox:SetScript("OnEscapePressed", function(self)
 	self:SetText("")
@@ -328,7 +325,7 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	end
 end)
 
-local function UpdateGuildBank()
+function Vortex:UpdateGuildBank()
 	for i = 1, 8 do
 		local tabIcon = DataStore:GetGuildBankTabIcon(selectedGuild, i)
 		tabs[i].button.icon:SetTexture(tabIcon)
@@ -336,11 +333,24 @@ local function UpdateGuildBank()
 	end
 	local tab = DataStore:GetGuildBankTab(selectedGuild, selectedTab)
 	for i = 1, 98 do
-		buttons[i]:SetItem(DataStore:GetSlotInfo(tab, i))
+		if tab then
+			buttons[i]:SetItem(DataStore:GetSlotInfo(tab, i))
+		else
+			buttons[i]:SetItem(nil)
+		end
 	end
 	tabs[selectedTab].button:SetChecked(true)
 	title:SetText(DataStore:GetGuildBankTabName(selectedGuild, selectedTab))
 	titleBg:SetWidth(title:GetWidth() + 20)
+	titleBg:SetShown(selectedGuild ~= nil)
+	titleBgL:SetShown(selectedGuild ~= nil)
+	titleBgR:SetShown(selectedGuild ~= nil)
+	for i, v in ipairs(columns) do
+		v:SetShown(selectedGuild ~= nil)
+	end
+	for i, v in ipairs(buttons) do
+		v:SetShown(selectedGuild ~= nil)
+	end
 	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild) or 0)
 	filterItems(searchBox:GetText())
 end
@@ -351,7 +361,7 @@ function Vortex:SelectGuild(guild)
 	end
 	selectedGuild = guild
 	selectedTab = 1
-	UpdateGuildBank()
+	self:UpdateGuildBank()
 	local accountKey, realmKey, guildKey = strsplit(".", guild or "")
 	guildMenu:SetText(guildKey or "Select guild")
 end

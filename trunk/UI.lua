@@ -1,6 +1,5 @@
 local addonName, Vortex = ...
 
-local Libra = LibStub("Libra")
 local LII = LibStub("LibItemInfo-1.0")
 local LIB = LibStub("LibItemButton")
 
@@ -10,7 +9,7 @@ local myFaction = UnitFactionGroup("player")
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 
-local frame = Libra:CreateUIPanel(addonName.."Frame")
+local frame = Vortex:CreateUIPanel("VortexFrame")
 Vortex.frame = frame
 frame:SetWidth(PANEL_DEFAULT_WIDTH + LIST_PANEL_WIDTH)
 frame:SetPoint("CENTER")
@@ -21,76 +20,47 @@ frame:HideButtonBar()
 frame:SetTitleText("Vortex")
 frame:SetScript("OnShow", function(self)
 	PlaySound("igCharacterInfoOpen")
-	if not PanelTemplates_GetSelectedTab(self) then
+	if not self:GetSelectedTab() then
 		Vortex:SelectModule(Vortex.db.defaultModule or "All")
-		PanelTemplates_SetTab(self, 1)
+		self:SelectTab(1)
 	end
 end)
 frame:SetScript("OnHide", function(self)
 	PlaySound("igCharacterInfoClose")
+	Vortex:CloseAllContainers()
 end)
 
 frame.Inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET + LIST_PANEL_WIDTH, PANEL_INSET_ATTIC_OFFSET)
 
 frame.list = CreateFrame("Frame", nil, frame.Inset)
 frame.list:SetAllPoints()
--- frame.list:Hide()
--- frame.list:SetFrameLevel(frame.Inset:GetFrameLevel() + 1)
 
 frame.ui = CreateFrame("Frame", nil, frame.Inset)
 frame.ui:SetAllPoints()
--- frame.ui:Hide()
 
 local inset = CreateFrame("Frame", nil, frame, "InsetFrameTemplate")
 inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET, PANEL_INSET_ATTIC_OFFSET)
 inset:SetPoint("BOTTOM", 0, PANEL_INSET_BOTTOM_OFFSET + 2)
 inset:SetPoint("RIGHT", frame.Inset, "LEFT", PANEL_INSET_RIGHT_OFFSET, 0)
 
-local tabs = {}
-
-local function onClick(self)
-	frame.selectedTab = self:GetID()
-	PanelTemplates_UpdateTabs(frame)
-	PlaySound("igCharacterInfoTab")
-end
-
-local function onEnable(self)
-	local frame = self.frame
-	frame:Hide()
-end
-
-local function onDisable(self)
-	local frame = self.frame
+function frame:OnTabSelected(id)
+	local frame = self.tabs[id].frame
 	frame:Show()
-	
 	local module = Vortex:GetSelectedModule()
 	Vortex.frame:SetWidth(frame.width or (not Vortex.db.useListView and module.altUI and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
 	UpdateUIPanelPositions(Vortex.frame)
 end
 
-local function createTab()
-	local numTabs = #tabs + 1
-	local tab = CreateFrame("Button", addonName.."FrameTab"..numTabs, frame, "CharacterFrameTabButtonTemplate")
-	if numTabs == 1 then
-		tab:SetPoint("BOTTOMLEFT", 19, -30)
-	else
-		tab:SetPoint("LEFT", tabs[numTabs - 1], "RIGHT", -15, 0)
-	end
-	tab:SetID(numTabs)
-	tab:SetScript("OnClick", onClick)
-	tab:SetScript("OnEnable", onEnable)
-	tab:SetScript("OnDisable", onDisable)
-	tabs[numTabs] = tab
-	frame.numTabs = numTabs
-	return tab
+function frame:OnTabDeselected(id)
+	self.tabs[id].frame:Hide()
 end
 
-local charTab = createTab()
+local charTab = frame:CreateTab()
 charTab:SetText("Character")
 charTab.frame = frame.Inset
 inset:SetParent(charTab.frame)
 
-local guildTab = createTab()
+local guildTab = frame:CreateTab()
 guildTab:SetText("Guild")
 guildTab.frame = CreateFrame("Frame", nil, frame)
 guildTab.frame:SetAllPoints()
@@ -134,9 +104,9 @@ function Vortex:CreateUI(name, label)
 	buttons[i] = button
 end
 
--- function Vortex:GetSelectedTab()
-	-- return self:GetModule(currentHighlight.module)
--- end
+function Vortex:GetSelectedTab()
+	return frame.tabs[frame:GetSelectedTab()]
+end
 
 local ItemInfo = setmetatable({}, {
 	__index = function(self, objectID)
@@ -165,7 +135,8 @@ local doUpdateUI
 LII.RegisterCallback(Vortex, "OnItemInfoReceivedBatch", function()
 	if doUpdateList then
 		doUpdateList = nil
-		Vortex:UpdateList()
+		-- Vortex:UpdateList()
+		Vortex:ApplyFilters()
 	end
 	if doUpdateUI then
 		doUpdateUI = nil
@@ -334,10 +305,6 @@ end
 
 local bagFrames = {}
 local containerButtons = {}
-
-frame:SetScript("OnHide", function(self)
-	Vortex:CloseAllContainers()
-end)
 
 local itemButtonMethods = {
 	SetItem = function(self, itemID, itemLink, count)
@@ -614,7 +581,7 @@ do
 	
 	local function update(self)
 		local list = Vortex:GetList()
-		local offset = HybridScrollFrame_GetOffset(self)
+		local offset = self:GetOffset()
 		local buttons = self.buttons
 		local numButtons = #buttons
 		for i = 1, numButtons do
@@ -658,18 +625,16 @@ do
 		HybridScrollFrame_Update(self, totalHeight, displayedHeight)
 	end
 	
-	local name = "VortexItemListScrollFrame"
-	local scrollFrame = CreateFrame("ScrollFrame", name, frame.list, "HybridScrollFrameTemplate")
+	local scrollFrame = Vortex:CreateScrollFrame("Hybrid", frame.list)
 	scrollFrame:SetPoint("TOP", frame.Inset, 0, -4)
 	scrollFrame:SetPoint("LEFT", frame.Inset, 4, 0)
 	scrollFrame:SetPoint("BOTTOMRIGHT", frame.Inset, -23, 4)
 	scrollFrame.update = function()
 		update(scrollFrame)
 	end
-	_G[name] = nil
 	Vortex.scroll = scrollFrame
 	
-	local scrollBar = CreateFrame("Slider", nil, scrollFrame, "HybridScrollBarTemplate")
+	local scrollBar = scrollFrame.scrollBar
 	scrollBar:ClearAllPoints()
 	scrollBar:SetPoint("TOP", frame.Inset, 0, -16)
 	scrollBar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", 0, 11)
@@ -696,7 +661,7 @@ local function onClick(self, characterKey)
 	CloseDropDownMenus()
 end
 
-local button = Libra:CreateDropdown(charTab.frame, true)
+local button = Vortex:CreateDropdown("Frame", charTab.frame)
 button:SetWidth(96)
 button:JustifyText("LEFT")
 button:SetPoint("TOPLEFT", frame, 0, -29)
