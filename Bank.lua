@@ -1,6 +1,6 @@
-local addonName, addon = ...
+local _, Vortex = ...
 
-local Bank = addon:NewModule("Bank", {
+local Bank = Vortex:NewModule("Bank", {
 	altUI = true,
 	width = 398,
 })
@@ -32,14 +32,6 @@ end
 function Bank:PLAYER_LOGIN()
 	self:RegisterEvent("BAG_UPDATE_DELAYED", "Refresh")
 	self:RegisterEvent("BANKFRAME_OPENED", OnBankFrameOpened)
-end
-
-function Bank:Refresh()
-	local character = DataStore:GetCharacter()
-	self:ClearCache(character)
-	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
-		self:Update(character)
-	end
 end
 
 function Bank:GetItemCount(character, itemID)
@@ -177,7 +169,7 @@ local bankFrameBags = {}
 local id, textureName = GetInventorySlotInfo("Bag1")
 
 for i = 1, NUM_BANKGENERIC_SLOTS do
-	local button = addon:CreateItemButton(BankUI)
+	local button = Vortex:CreateItemButton(BankUI)
 	button:SetID(i)
 	if i == 1 then
 		button:SetPoint("TOPLEFT", 28, -64)
@@ -193,7 +185,7 @@ for i = 1, NUM_BANKGENERIC_SLOTS do
 end
 
 for i = 1, NUM_BANKBAGSLOTS do
-	local button = addon:CreateBagButton(BankUI)
+	local button = Vortex:CreateBagButton(BankUI)
 	button:SetID(i + ITEM_INVENTORY_BANK_BAG_OFFSET)
 	button.bg = textureName
 	button.tooltipText = BANK_BAG
@@ -202,7 +194,7 @@ for i = 1, NUM_BANKBAGSLOTS do
 	else
 		button:SetPoint("TOPLEFT", bankFrameBags[i - 1], "TOPRIGHT", 12, 0)
 	end
-	addon:GetContainerFrame(i + ITEM_INVENTORY_BANK_BAG_OFFSET).containerButton = button
+	Vortex:GetContainerFrame(i + ITEM_INVENTORY_BANK_BAG_OFFSET).containerButton = button
 	local texture = button:CreateTexture(nil, "BORDER", "Bank-Slot-BG", -1)
 	texture:SetPoint("TOPLEFT", -6, 5)
 	texture:SetPoint("BOTTOMRIGHT", 6, -7)
@@ -217,10 +209,10 @@ for i = 1, 20 do
 	end
 end
 
-addon:RegisterContainerButtons(100, bankFrameItems)
+Vortex:RegisterContainerButtons(100, bankFrameItems)
 
 function Bank:UpdateUI(character)
-	addon:UpdateContainer(100, character)
+	Vortex:UpdateContainer(100, character)
 	for i = 1, NUM_BANKBAGSLOTS do
 		local button = bankFrameBags[i]
 		local icon, link, size, freeslots = DataStore:GetContainerInfo(character, button:GetID())

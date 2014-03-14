@@ -1,6 +1,6 @@
-local addonName, addon = ...
+local _, Vortex = ...
 
-local Character = addon:NewModule("Character", {
+local Character = Vortex:NewModule("Character", {
 	altUI = true,
 })
 
@@ -9,15 +9,7 @@ function Character:OnInitialize()
 end
 
 function Character:PLAYER_LOGIN()
-	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED")
-end
-
-function Character:PLAYER_EQUIPMENT_CHANGED()
-	local character = DataStore:GetCharacter()
-	self:ClearCache(character)
-	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
-		self:Update(character)
-	end
+	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "Refresh")
 end
 
 function Character:BuildList(character)
@@ -115,7 +107,7 @@ local buttons = {}
 
 for i, slot in ipairs(slots) do
 	local id, textureName = GetInventorySlotInfo(slot)
-	local button = addon:CreateItemButton(itemsFrame)
+	local button = Vortex:CreateItemButton(itemsFrame)
 	button:SetID(id)
 	button.bg = textureName
 	button.tooltipText = _G[strupper(slot)]
@@ -157,7 +149,7 @@ local bankFrameBags = {}
 local id, textureName = GetInventorySlotInfo("Bag1")
 
 for i = 0, 4 do
-	local button = addon:CreateBagButton(modelFrame)
+	local button = Vortex:CreateBagButton(modelFrame)
 	button:SetID(i)
 	button.bg = textureName
 	-- button.tooltipText = BANK_BAG
@@ -166,7 +158,7 @@ for i = 0, 4 do
 	else
 		button:SetPoint("TOPRIGHT", bankFrameBags[i - 1], "TOPLEFT", -6, 0)
 	end
-	addon:GetContainerFrame(i).containerButton = button
+	Vortex:GetContainerFrame(i).containerButton = button
 	local texture = button:CreateTexture(nil, "BORDER", "Bank-Slot-BG", -1)
 	texture:SetPoint("TOPLEFT", -6, 5)
 	texture:SetPoint("BOTTOMRIGHT", 6, -7)
@@ -189,11 +181,11 @@ function Character:UpdateUI(character)
 end
 
 function Character:uiSearch(text)
-	local character = addon:GetSelectedCharacter()
+	local character = Vortex:GetSelectedCharacter()
 	for i, button in ipairs(buttons) do
 		local item = DataStore:GetInventoryItem(character, button:GetID())
 		local hasItem = (item ~= nil)
-		local item = item and addon.ItemInfo[item]
+		local item = item and Vortex.ItemInfo[item]
 		local match = not text or (item and strfind(item.name:lower(), text:lower(), nil, true))
 		button.searchOverlay:SetShown(item and not match)
 	end

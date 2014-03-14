@@ -1,6 +1,6 @@
-local addonName, addon = ...
+local _, Vortex = ...
 
-local Mail = addon:NewModule("Mail")
+local Mail = Vortex:NewModule("Mail")
 
 function Mail:OnInitialize()
 	self:RegisterEvent("PLAYER_LOGIN")
@@ -16,8 +16,6 @@ local function OnMailClosed(self)
 	self.isOpen = nil
 	self:UnregisterEvent("MAIL_CLOSED")
 	self:Refresh()
-	
-	-- self:UnregisterEvent("MAIL_SEND_INFO_UPDATE")
 end
 
 local function OnMailShow(self)
@@ -26,22 +24,14 @@ local function OnMailShow(self)
 	
 	self:Refresh()
 	self:RegisterEvent("MAIL_CLOSED", OnMailClosed)
+	-- self:RegisterEvent("MAIL_INBOX_UPDATE", OnMailInboxUpdate)
 	self:RegisterEvent("MAIL_INBOX_UPDATE", "Refresh")
-	-- self:RegisterEvent("MAIL_SEND_INFO_UPDATE", OnMailSendInfoUpdate)
 
 	self.isOpen = true
 end
 
 function Mail:PLAYER_LOGIN()
-	self:RegisterEvent("AUCTION_HOUSE_SHOW", OnAuctionHouseShow)
-end
-
-function Mail:Refresh()
-	local character = DataStore:GetCharacter()
-	self:ClearCache(character)
-	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
-		self:Update(character)
-	end
+	self:RegisterEvent("MAIL_SHOW", OnMailShow)
 end
 
 function Mail:BuildList(character)
@@ -71,12 +61,12 @@ end
 function Mail:OnButtonUpdate(button, object, list)
 	button.source:SetText("|cffffffff"..object.sender)
 	if object.expiry >=  24 * 60 * 60 then
-		-- daysLeft = format(DAYS_ABBR, floor(daysLeft)).." ";
-		button.info:SetText(GREEN_FONT_COLOR_CODE..SecondsToTime(object.expiry)..FONT_COLOR_CODE_CLOSE)
-	else
+		button.info:SetText(GREEN_FONT_COLOR_CODE..SecondsToTime(object.expiry, nil, nil, 1)..FONT_COLOR_CODE_CLOSE)
+	elseif object.expiry > 0 then
 		button.info:SetText(RED_FONT_COLOR_CODE..SecondsToTime(object.expiry)..FONT_COLOR_CODE_CLOSE)
+	else
+		button.info:SetText(RED_FONT_COLOR_CODE.."Expired"..FONT_COLOR_CODE_CLOSE)
 	end
-	-- button.info:SetText(SecondsToTime(object.expiry))
 end
 
 function Mail.sort(a, b)

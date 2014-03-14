@@ -1,6 +1,6 @@
-local addonName, addon = ...
+local _, Vortex = ...
 
-local Auctions = addon:NewModule("Auctions")
+local Auctions = Vortex:NewModule("Auctions")
 
 function Auctions:OnInitialize()
 	self:RegisterEvent("PLAYER_LOGIN")
@@ -22,14 +22,6 @@ end
 
 function Auctions:PLAYER_LOGIN()
 	self:RegisterEvent("AUCTION_HOUSE_SHOW", OnAuctionHouseShow)
-end
-
-function Auctions:Refresh()
-	local character = DataStore:GetCharacter()
-	self:ClearCache(character)
-	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
-		self:Update(character)
-	end
 end
 
 function Auctions:BuildList(character)

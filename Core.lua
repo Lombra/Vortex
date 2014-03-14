@@ -80,7 +80,7 @@ local moduleMethods = {
 	ClearCache = function(self, character)
 		self.cache[character] = nil
 		Vortex:GetModule("All").cache[character] = nil
-		Vortex:ClearSearchResultsCache()
+		Vortex:ClearSearchResultsCache(character)
 	end,
 	IncludeContainer = function(self, containerID)
 		tinsert(self.containers, containerID)
@@ -102,6 +102,13 @@ local moduleMethods = {
 		end
 		return list
 	end,
+	Refresh = function(self)
+		local character = DataStore:GetCharacter()
+		self:ClearCache(character)
+		if Vortex:GetSelectedModule() == self and Vortex:GetSelectedCharacter() == character then
+			self:Update(character)
+		end
+	end,
 	UpdateUI = function(self, character)
 		for i, containerID in ipairs(self.containers) do
 			Vortex:UpdateContainer(containerID, character)
@@ -114,6 +121,12 @@ function Vortex:OnModuleCreated(name, table)
 	if table.altUI then
 		addUI(table)
 	end
+	if table.items == nil then
+		table.items = true
+	end
+	if table.search == nil then
+		table.search = true
+	end
 	for k, v in pairs(moduleMethods) do table[k] = v end
 	table.cache = {}
 	table.containers = {}
@@ -123,11 +136,9 @@ end
 function Vortex:SelectModule(moduleName)
 	local selectedModule = self:GetSelectedModule()
 	local module = self:GetModule(moduleName)
-	if module == selectedModule then
-		-- return
-	end
 	if selectedModule then
 		selectedModule.button:UnlockHighlight()
+		selectedModule.button.highlight:SetDesaturated(false)
 		if selectedModule.altUI then
 			selectedModule.ui:Hide()
 		end
@@ -137,16 +148,14 @@ function Vortex:SelectModule(moduleName)
 	module.button.highlight:SetDesaturated(false)
 	local selectedCharacter = self:GetSelectedCharacter()
 	local showList = not module.altUI or self.db.useListView
-	if showList then
-		self:SetList(module:GetList(selectedCharacter))
-	else
+	if not showList then
 		module.ui:Show()
 	end
-	module:Update(selectedCharacter)
 	self.frame.list:SetShown(showList)
 	self.frame.ui:SetShown(not showList)
-	self.frame:SetWidth(self:GetSelectedTab() and self:GetSelectedTab().frame.width or (not showList and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
+	self.frame:SetWidth(self:GetSelectedFrame() and self:GetSelectedFrame().width or (not showList and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
 	UpdateUIPanelPositions(self.frame)
+	module:Update(selectedCharacter)
 end
 
 function Vortex:GetSelectedModule()
@@ -167,11 +176,10 @@ function Vortex:SelectCharacter(character)
 	self.selectedCharacter = character
 	local accountKey, realmKey, charKey = strsplit(".", character)
 	self.characterMenu:SetText(charKey)
-	self:GetSelectedModule():Update(character)
 	self:CloseAllContainers()
-	if self.isSearching then
-		self:StopSearch()
-	end
+	self:StopSearch()
+	-- self:UpdateModule(self:GetSelectedModule(), character)
+	self:SelectModule(self:GetSelectedModule().name)
 end
 
 function Vortex:GetSelectedCharacter()
@@ -207,7 +215,7 @@ function Vortex:DeleteCharacter(character)
 		self:SelectCharacter(DataStore:GetCharacter())
 	end
 	self:GetModule("All").cache[character] = nil
-	self:ClearSearchResultsCache()
+	self:ClearSearchResultsCache(character)
 	-- character array for this realm will need to be rebuilt
 	sortedCharacters[realmKey] = nil
 end

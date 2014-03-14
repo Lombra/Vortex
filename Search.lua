@@ -34,13 +34,14 @@ local function onEditFocusGained(self)
 	end
 end
 
-local searchBox = Libra:CreateEditbox(VortexFrameTab1.frame, true)
+local searchBox = Libra:CreateEditbox(Vortex.frame.character, true)
 searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", Vortex.frame, -16, -33)
 searchBox.clearFunc = function()
 	Vortex:ClearFilter("name")
+	Vortex:SetList(nil)
 end
-searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
+-- searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
 -- searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
 searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
 searchBox:SetScript("OnTextChanged", function(self, isUserInput)
@@ -86,11 +87,11 @@ local function onClick(self, arg1)
 	Vortex:SetSearchScope(arg1)
 end
 
-local button = Libra:CreateDropdown("Frame", VortexFrameTab1.frame)
-button:SetWidth(128)
-button:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
-button:SetText("|cffffd200Search:|r "..searchFilter)
-button.initialize = function(self, level)
+local searchScopeMenu = Libra:CreateDropdown("Frame", Vortex.frame.character)
+searchScopeMenu:SetWidth(128)
+searchScopeMenu:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
+searchScopeMenu:SetText("|cffffd200Search:|r "..searchFilter)
+searchScopeMenu.initialize = function(self, level)
 	for i, option in ipairs(searchMenuOptions) do
 		local info = UIDropDownMenu_CreateInfo()
 		info.text = option
@@ -101,7 +102,6 @@ button.initialize = function(self, level)
 		UIDropDownMenu_AddButton(info, level)
 	end
 end
-Vortex.searchScopeMenu = button
 
 local filterBar = CreateFrame("Frame", nil, Vortex.frame.list)
 filterBar:SetPoint("TOP", 0, -4)
@@ -120,7 +120,6 @@ filterBar.text:SetPoint("LEFT", 5, 0)
 filterBar.clear = CreateFrame("Button", nil, filterBar)
 filterBar.clear:SetSize(16, 16)
 filterBar.clear:SetPoint("RIGHT", -2, 0)
-filterBar.clear:SetNormalTexture([[Interface\FriendsFrame\ClearBroadcastIcon]])
 filterBar.clear:SetAlpha(0.5)
 filterBar.clear:SetScript("OnEnter", function(self)
 	self:SetAlpha(1.0)
@@ -134,16 +133,22 @@ filterBar.clear:SetScript("OnClick", function(self)
 	searchBox.clearButton:Hide()
 	Vortex:ClearFilter("name")
 	Vortex:StopSearch()
+	Vortex:SelectModule(Vortex:GetSelectedModule().name)
 end)
 filterBar.clear:SetScript("OnMouseDown", function(self)
-	self:SetPoint("RIGHT", -1, -1)
+	self.texture:SetPoint("CENTER", 1, -1)
 end)
 filterBar.clear:SetScript("OnMouseUp", function(self)
-	self:SetPoint("RIGHT", -2, 0)
+	self.texture:SetPoint("CENTER", 0, 0)
 end)
 filterBar.clear:SetScript("OnHide", function(self)
-	self:SetPoint("RIGHT", -2, 0)
+	self.texture:SetPoint("CENTER", 0, 0)
 end)
+
+filterBar.clear.texture = filterBar.clear:CreateTexture()
+filterBar.clear.texture:SetSize(16, 16)
+filterBar.clear.texture:SetPoint("CENTER")
+filterBar.clear.texture:SetTexture([[Interface\FriendsFrame\ClearBroadcastIcon]])
 
 local function match(item, searchString)
 	if not item then
@@ -190,7 +195,7 @@ local function dynamic(offset)
 	local heightLeft = offset
 	
 	for i, item in ipairs(Vortex:GetList()) do
-		local buttonHeight = Vortex:GetItemSearchResultText(item.id or item.link)
+		local buttonHeight = Vortex:GetItemSearchResultText((item.linkType and item.linkType..":"..item.id) or item.id or item.link)
 		
 		if heightLeft - buttonHeight <= 0 then
 			return i - 1, heightLeft
@@ -216,6 +221,7 @@ function Vortex:Search()
 end
 
 function Vortex:StopSearch()
+	if not self:IsSearching() then return end
 	self.isSearching = false
 	filterBar:Hide()
 	self.scroll:SetPoint("TOP", self.frame.Inset, 0, -4)
@@ -224,24 +230,24 @@ function Vortex:StopSearch()
 	searchBox:ClearFocus()
 	searchBox.clearButton:Hide()
 	self:ClearFilter("name")
-	local module = self:GetSelectedModule()
-	self:SelectModule(module.name)
+	-- local module = self:GetSelectedModule()
 	-- module:Search()
+end
+
+function Vortex:IsSearching()
+	return self.isSearching
 end
 
 function Vortex:SetSearchScope(scope)
 	searchFilter = scope
 	self:ClearSearchResultsCache()
-	button:SetText("|cffffd200Search:|r "..scope)
+	searchScopeMenu:SetText("|cffffd200Search:|r "..scope)
 	local module = self:GetSelectedModule()
 	local character = self:GetSelectedCharacter()
 	if scope ~= "UI" then
 		if self:GetFilter("name") then
 			self:Search()
-			local list = self:GetCache()
-			-- self:SetList(list) -- don't UpdateList here
-			self.list = list or empty
-			self.filteredList = nil
+			self.list = self:GetCache()
 			self:ApplyFilters()
 		end
 	else
@@ -250,15 +256,41 @@ function Vortex:SetSearchScope(scope)
 	end
 end
 
+local cache = {}
+
+local function getCache(character)
+	if not cache[character] then
+		local added = {}
+		local list = {}
+		for k, module in Vortex:IterateModules() do
+			if module.search then
+				for i, v in ipairs(module:GetList(character)) do
+					local item = (v.linkType and v.linkType..":"..v.id) or v.id or v.link
+					if not added[item] then
+						tinsert(list, v)
+						if item then
+							added[item] = #list
+						end
+					else
+						local item = list[added[item]]
+						item.count = (item.count or v.count) and (item.count or 0) + (v.count or 0)
+					end
+				end
+			end
+		end
+		cache[character] = list
+	end
+	return cache[character]
+end
+
 local resultsCache = {} -- list of results passed to SetList
 local searchResults = {} -- details about each item, owners
 
 local function mergeCharacterItems(list, character)
-	local All = Vortex:GetModule("All")
-	local items = All:GetList(character)
+	local items = getCache(character)
 	for i = 1, #items do
 		local v = items[i]
-		local itemID = v.id or v.link
+		local itemID = (v.linkType and v.linkType..":"..v.id) or v.id or v.link
 		if itemID then
 			local item = searchResults[itemID]
 			if not item then
@@ -272,7 +304,6 @@ local function mergeCharacterItems(list, character)
 end
 
 local function mergeItems(list, realm)
-	local All = Vortex:GetModule("All")
 	for k, character in pairs(DataStore:GetCharacters(realm)) do
 		mergeCharacterItems(list, character)
 	end
@@ -350,9 +381,9 @@ local function sortItemResults(a, b)
 	end
 end
 
-local c = {}
-local c2 = {}
-local c3 = {}
+local itemButtonHeight = {}
+local itemOwners = {}
+local itemAmount = {}
 
 local dummy = Vortex.frame:CreateFontString(nil, nil, "GameFontHighlightSmallLeft")
 dummy:SetSpacing(1)
@@ -362,9 +393,13 @@ function Vortex:GetItemSearchResultText(item)
 		return BUTTON_HEIGHT + BUTTON_OFFSET
 	end
 	-- return cached search info if available
-	if c[item] then return c[item], c2[item], c3[item] end
+	if itemButtonHeight[item] then
+		return itemButtonHeight[item], itemOwners[item], itemAmount[item]
+	end
 	local result = searchResults[item]
-	if not result then return BUTTON_HEIGHT + BUTTON_OFFSET end
+	-- if not result then
+		-- return BUTTON_HEIGHT + BUTTON_OFFSET
+	-- end
 	local owners = ""
 	local total = 0
 	if result then
@@ -391,22 +426,25 @@ function Vortex:GetItemSearchResultText(item)
 	end
 	dummy:SetText(owners)
 	local buttonHeight = max(BUTTON_HEIGHT, 15 + dummy:GetHeight() + 1) + BUTTON_OFFSET
-	c[item] = buttonHeight
-	c2[item] = owners
-	c3[item] = total
+	itemButtonHeight[item] = buttonHeight
+	itemOwners[item] = owners
+	itemAmount[item] = total
 	return buttonHeight, owners, total
 end
 
-function Vortex:ClearSearchResultsCache()
+function Vortex:ClearSearchResultsCache(character)
 	doUpdateResults = true
-	wipe(c)
-	wipe(c2)
-	wipe(c3)
+	wipe(itemButtonHeight)
+	wipe(itemOwners)
+	wipe(itemAmount)
+	if character then
+		cache[character] = nil
+	end
 end
 
 Vortex.filterArgs = {}
 
-local function FilterApproves(itemID)
+local function filterApproves(itemID)
 	local filterArg = Vortex:GetFilter("name")
 	if not filterArg then
 		return true
@@ -423,14 +461,12 @@ end
 local filteredList = {}
 
 function Vortex:ApplyFilters()
-	local t = debugprofilestop()
 	wipe(filteredList)
 	for i, v in ipairs(self:GetList(true)) do
-		if FilterApproves(v.id or v.link) then
+		if filterApproves((v.linkType and v.linkType..":"..v.id) or v.id or v.link) then
 			tinsert(filteredList, v)
 		end
 	end
-	-- print("filter:", debugprofilestop() - t)
 	self:SetFilteredList(filteredList)
 end
 

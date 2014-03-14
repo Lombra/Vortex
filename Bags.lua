@@ -1,6 +1,6 @@
-local addonName, addon = ...
+local _, Vortex = ...
 
-local Bags = addon:NewModule("Bags")
+local Bags = Vortex:NewModule("Bags")
 
 for i = 0, 4 do	
 	Bags:IncludeContainer(i)
@@ -17,10 +17,10 @@ end
 function Bags:Refresh()
 	local character = DataStore:GetCharacter()
 	self:ClearCache(character)
-	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
+	if Vortex:GetSelectedModule() == self and Vortex:GetSelectedCharacter() == character then
 		self:Update(character)
 		for i, containerID in ipairs(self.containers) do
-			addon:UpdateContainer(containerID, character)
+			Vortex:UpdateContainer(containerID, character)
 		end
 	end
 end

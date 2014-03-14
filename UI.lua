@@ -32,16 +32,16 @@ end)
 
 frame.Inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET + LIST_PANEL_WIDTH, PANEL_INSET_ATTIC_OFFSET)
 
+local inset = CreateFrame("Frame", nil, frame, "InsetFrameTemplate")
+inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET, PANEL_INSET_ATTIC_OFFSET)
+inset:SetPoint("BOTTOM", 0, PANEL_INSET_BOTTOM_OFFSET + 2)
+inset:SetPoint("RIGHT", frame.Inset, "LEFT", PANEL_INSET_RIGHT_OFFSET, 0)
+
 frame.list = CreateFrame("Frame", nil, frame.Inset)
 frame.list:SetAllPoints()
 
 frame.ui = CreateFrame("Frame", nil, frame.Inset)
 frame.ui:SetAllPoints()
-
-local inset = CreateFrame("Frame", nil, frame, "InsetFrameTemplate")
-inset:SetPoint("TOPLEFT", PANEL_INSET_LEFT_OFFSET, PANEL_INSET_ATTIC_OFFSET)
-inset:SetPoint("BOTTOM", 0, PANEL_INSET_BOTTOM_OFFSET + 2)
-inset:SetPoint("RIGHT", frame.Inset, "LEFT", PANEL_INSET_RIGHT_OFFSET, 0)
 
 function frame:OnTabSelected(id)
 	local frame = self.tabs[id].frame
@@ -55,24 +55,17 @@ function frame:OnTabDeselected(id)
 	self.tabs[id].frame:Hide()
 end
 
-local charTab = frame:CreateTab()
-charTab:SetText("Character")
-charTab.frame = frame.Inset
-inset:SetParent(charTab.frame)
-
-local guildTab = frame:CreateTab()
-guildTab:SetText("Guild")
-guildTab.frame = CreateFrame("Frame", nil, frame)
-guildTab.frame:SetAllPoints()
-guildTab.frame:Hide()
-guildTab.frame.width = 750
-frame.guild = guildTab.frame
+local characterTab = frame:CreateTab()
+characterTab:SetText("Character")
+characterTab.frame = frame.Inset
+inset:SetParent(characterTab.frame)
+frame.character = characterTab.frame
 
 local function onClick(self)
-	if Vortex.isSearching then
+	if self.module ~= Vortex:GetSelectedModule().name or Vortex:IsSearching() then
 		Vortex:StopSearch()
+		Vortex:SelectModule(self.module)
 	end
-	Vortex:SelectModule(self.module)
 end
 
 local buttons = {}
@@ -104,22 +97,37 @@ function Vortex:CreateUI(name, label)
 	buttons[i] = button
 end
 
-function Vortex:GetSelectedTab()
-	return frame.tabs[frame:GetSelectedTab()]
+function Vortex:GetSelectedFrame()
+	local tab = frame:GetSelectedTab()
+	return tab and frame.tabs[tab].frame
+end
+
+local objectTypes = {
+	battlepet = function(link)
+		local _, speciesID, level, breedQuality, maxHealth, power, speed, battlePetID = strsplit(":", link)
+		local name, icon, petType = C_PetJournal.GetPetInfoBySpeciesID(speciesID)
+		return {
+			name = name,
+			quality = tonumber(breedQuality),
+			icon = icon,
+		}
+	end,
+}
+
+function Vortex:AddObjectType(objectType, func)
+	objectTypes[objectType] = func
 end
 
 local ItemInfo = setmetatable({}, {
 	__index = function(self, objectID)
-		if type(objectID) == "string" and objectID:match("battlepet:%d+") then
-			local _, speciesID, level, breedQuality, maxHealth, power, speed, battlePetID = strsplit(":", objectID)
-			local name, icon, petType = C_PetJournal.GetPetInfoBySpeciesID(speciesID)
-			local object = {
-				name = name,
-				quality = tonumber(breedQuality),
-				icon = icon,
-			}
-			self[objectID] = object
-			return object
+		if type(objectID) == "string" and not strmatch(objectID, "item:%d+") then
+			for objectType, func in pairs(objectTypes) do
+				if strmatch(objectID, objectType..":%d+") then
+					local object = func(objectID)
+					self[objectID] = object
+					return object
+				end
+			end
 		end
 		
 		local object = LII[objectID]
@@ -166,6 +174,10 @@ local function isSoulboundItem(item)
 	return false
 end
 
+-- ITEM_BIND_TO_ACCOUNT = "Binds to account";
+-- ITEM_BIND_TO_BNETACCOUNT = "Binds to Battle.net account";
+-- ITEM_BNETACCOUNTBOUND = "Battle.net Account Bound";
+
 local function isBNetBoundItem(item)
     tooltip:SetOwner(UIParent, "ANCHOR_NONE")
     tooltip:SetItemByID(item)
@@ -176,10 +188,6 @@ local function isBNetBoundItem(item)
 	end
 	return false
 end
-
--- ITEM_BIND_TO_ACCOUNT = "Binds to account";
--- ITEM_BIND_TO_BNETACCOUNT = "Binds to Battle.net account";
--- ITEM_BNETACCOUNTBOUND = "Battle.net Account Bound";
 
 local TOOLTIP_LINE_CHARACTER = "|cffffffff%d|r %s %s"
 local TOOLTIP_LINE_CHARACTER_REALM = "|cffffffff%d|r %s - %s %s"
@@ -193,7 +201,7 @@ local function getItem(tooltip, item, realm)
 		local where = "("
 		local count = 0
 		for k, module in Vortex:IterateModules() do
-			if not module.noSearch then
+			if module.items then
 				local moduleCount = module:GetItemCount(character, item) or 0
 				if moduleCount > 0 then
 					count = count + moduleCount
@@ -277,14 +285,15 @@ end
 do
 	local All = Vortex:NewModule("All", {
 		label = "All items",
-		noSearch = true,
+		search = false,
+		items = false,
 	})
 	
 	function All:BuildList(character)
 		local added = {}
 		local list = {}
 		for k, module in Vortex:IterateModules() do
-			if not module.noSearch then
+			if module.items then
 				for i, v in ipairs(module:GetList(character)) do
 					local item = v.link or v.id
 					if not added[item] then
@@ -404,6 +413,7 @@ function Vortex:SetupItemButton(button)
 	button:SetScript("OnEnter", button.OnEnter)
 	button:SetScript("OnLeave", button.OnLeave)
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+	button.UpdateTooltip = button.OnEnter
 end
 
 function Vortex:CreateItemButton(parent)
@@ -549,11 +559,11 @@ do
 			button.label:SetTextColor(1, 1, 1)
 			button.icon:SetTexture(GetCoinIcon(money))
 		else
-			local item = ItemInfo[object.id or object.link]
-			button.icon:SetTexture(GetItemIcon(object.id) or item.icon)
+			local item = ItemInfo[(object.linkType and object.linkType..":"..object.id) or object.id or object.link]
+			button.icon:SetTexture(not object.linkType and GetItemIcon(object.id) or item.icon)
 			if item then
-				local r, g, b = GetItemQualityColor(item.quality)
-				local buttonHeight, owners, count = Vortex:GetItemSearchResultText(object.id)
+				local r, g, b = GetItemQualityColor(item.quality or 1)
+				local buttonHeight, owners, count = Vortex:GetItemSearchResultText((object.linkType and object.linkType..":"..object.id) or object.id or object.link)
 				local count = count or object.count
 				if (count and count > 1) then
 					button.label:SetFormattedText("%s |cffffffff(%d)|r", item.name, count)
@@ -568,7 +578,7 @@ do
 				doUpdateList = true
 			end
 		end
-		button.item = object.link or object.id
+		button.item = (object.linkType and object.linkType..":"..object.id) or object.link or object.id
 		
 		if button.showingTooltip then
 			if not isHeader then
@@ -597,13 +607,13 @@ do
 				button.source:SetPoint("TOPLEFT", button.icon, "RIGHT", 6, -2)
 				button.item = nil
 				local selectedModule = Vortex:GetSelectedModule()
-				if not Vortex.isSearching and selectedModule.UpdateButton then
+				if not Vortex:IsSearching() and selectedModule.UpdateButton then
 					button.icon:SetTexture(nil)
 					button:SetHeight(BUTTON_HEIGHT)
 					selectedModule:UpdateButton(button, object)
 				else
 					updateButton(button, object)
-					if not Vortex.isSearching and selectedModule and selectedModule.OnButtonUpdate then
+					if not Vortex:IsSearching() and selectedModule and selectedModule.OnButtonUpdate then
 						selectedModule:OnButtonUpdate(button, object)
 					end
 				end
@@ -614,10 +624,10 @@ do
 		local totalHeight = #list * self.buttonHeight
 		local displayedHeight = numButtons * self.buttonHeight
 		
-		if Vortex.isSearching then
+		if Vortex:IsSearching() then
 			totalHeight = 0
 			for i, item in ipairs(list) do
-				totalHeight = totalHeight + Vortex:GetItemSearchResultText(item.id or item.link)
+				totalHeight = totalHeight + Vortex:GetItemSearchResultText((item.linkType and item.linkType..":"..item.id) or item.id or item.link)
 			end
 			displayedHeight = displayedHeight - 20
 		end
@@ -661,7 +671,7 @@ local function onClick(self, characterKey)
 	CloseDropDownMenus()
 end
 
-local button = Vortex:CreateDropdown("Frame", charTab.frame)
+local button = Vortex:CreateDropdown("Frame", characterTab.frame)
 button:SetWidth(96)
 button:JustifyText("LEFT")
 button:SetPoint("TOPLEFT", frame, 0, -29)
@@ -713,14 +723,17 @@ local function listSort(a, b)
 	if (a.money ~= nil) ~= (b.money ~= nil) then
 		return a.money
 	end
-	local itemA = ItemInfo[a.id or a.link]
-	local itemB = ItemInfo[b.id or b.link]
+	local itemA = ItemInfo[(a.linkType and a.linkType..":"..a.id) or a.id or a.link]
+	local itemB = ItemInfo[(b.linkType and b.linkType..":"..b.id) or b.id or b.link]
 	-- if either item is not cached, break and wait for item info update
 	if not (itemA and itemB) then
 		doUpdateList = true
 		return
 	end
 	if itemA.quality ~= itemB.quality then
+		if not (itemA.quality and itemB.quality) then
+			return not itemA.quality
+		end
 		return itemA.quality > itemB.quality
 	else
 		return itemA.name < itemB.name
