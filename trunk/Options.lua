@@ -1,7 +1,7 @@
-local addonName, Vortex = ...
+local VORTEX, Vortex = ...
 
 local frame = CreateFrame("Frame")
-frame.name = addonName
+frame.name = VORTEX
 InterfaceOptions_AddCategory(frame)
 Vortex.config = frame
 
@@ -10,7 +10,7 @@ title:SetPoint("TOPLEFT", 16, -16)
 title:SetPoint("RIGHT", -16, 0)
 title:SetJustifyH("LEFT")
 title:SetJustifyV("TOP")
-title:SetText(frame.name)
+title:SetText(VORTEX)
 
 local function onClick(self)
 	local checked = self:GetChecked() ~= nil
@@ -147,15 +147,30 @@ function Vortex:LoadSettings()
 	local function onClickCharacter(self, character)
 		local accountKey, realmKey, characterKey = strsplit(".", character)
 		StaticPopup_Show("VORTEX_DELETE_CHARACTER", characterKey, realmKey, character)
+		CloseDropDownMenus()
 	end
 	
 	local function onClickGuild(self, guild)
 		local accountKey, realmKey, guildKey = strsplit(".", guild)
 		StaticPopup_Show("VORTEX_DELETE_GUILD", guildKey, realmKey, guild)
+		CloseDropDownMenus()
 	end
 	
-	local menu = Vortex:CreateDropdown("Menu")
-	menu.initialize = function(self, level)
+	local button = CreateFrame("Button", "VortexPurgeDataButton", frame, "UIMenuButtonStretchTemplate")
+	button:SetWidth(96)
+	button:SetPoint("TOP", defaultSearch, "BOTTOM", 0, -16)
+	button.rightArrow:Show()
+	button:SetText("Purge data")
+	button:SetScript("OnClick", function(self)
+		self.menu:Toggle()
+	end)
+	
+	button.menu = Vortex:CreateDropdown("Menu")
+	button.menu.relativeTo = button
+	button.menu.relativePoint = "TOPRIGHT"
+	button.menu.xOffset = 0
+	button.menu.yOffset = 0
+	button.menu.initialize = function(self, level)
 		for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 			if characterKey ~= DataStore:GetCharacter() then
 				local accountKey, realmKey, characterName = strsplit(".", characterKey)
@@ -203,20 +218,6 @@ function Vortex:LoadSettings()
 			end
 		end
 	end
-	
-	local button = CreateFrame("Button", "VortexPurgeDataButton", frame, "UIMenuButtonStretchTemplate")
-	button:SetWidth(96)
-	button:SetPoint("TOP", defaultSearch, "BOTTOM", 0, -16)
-	button.rightArrow:Show()
-	button:SetText("Purge data")
-	button:SetScript("OnClick", function(self)
-		menu:ToggleMenu()
-	end)
-	
-	menu.relativeTo = button
-	menu.relativePoint = "TOPRIGHT"
-	menu.xOffset = 0
-	menu.yOffset = 0
 end
 
 StaticPopupDialogs["VORTEX_DELETE_CHARACTER"] = {

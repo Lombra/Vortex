@@ -4,7 +4,15 @@ local LIB = LibStub("LibItemButton")
 
 local ItemInfo = Vortex.ItemInfo
 
-local frame = Vortex.frame.guild
+local guildTab = Vortex.frame:CreateTab()
+guildTab:SetText(GUILD_BANK)
+guildTab.frame = CreateFrame("Frame", nil, Vortex.frame)
+guildTab.frame:SetAllPoints()
+guildTab.frame:Hide()
+guildTab.frame.width = 750
+Vortex.frame.guild = guildTab.frame
+
+local frame = guildTab.frame
 
 local selectedGuild
 local selectedTab
@@ -286,26 +294,25 @@ guildMenu.initialize = function(self, level)
 end
 
 local function filterItems(text)
-	for i = 1, 8 do
+	for i, tabButton in ipairs(tabs) do
 		local tab = DataStore:GetGuildBankTab(selectedGuild, i)
-		tabs[i].button.searchOverlay:Show()
-		for j = 1, 98 do
-			if tab then
-				local button = buttons[j]
+		local tabOverlay = tabButton.button.searchOverlay
+		tabOverlay:Show()
+		if tab then
+			for j, button in ipairs(buttons) do
 				local itemID, itemLink = DataStore:GetSlotInfo(tab, j)
 				local item = (itemID or itemLink) and ItemInfo[itemID or itemLink]
 				local match = text == "" or text == SEARCH or (item and strfind(item.name:lower(), text:lower(), nil, true))
 				if i == selectedTab then
 					button.searchOverlay:SetShown((itemID or itemLink) and not match)
-					if (itemID or itemLink) and match then
-						tabs[i].button.searchOverlay:Hide()
+					if ((itemID or itemLink) and match) or (text == "" or text == SEARCH) then
+						tabOverlay:Hide()
 					end
 				elseif match then
-					tabs[i].button.searchOverlay:Hide()
+					-- while searching inactive tabs we only need to know if *any* item in that tab is a match
+					tabOverlay:Hide()
 					break
 				end
-			else
-				tabs[i].button.searchOverlay:Hide()
 			end
 		end
 	end
@@ -314,6 +321,9 @@ end
 local searchBox = Vortex:CreateEditbox(frame, true)
 searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", -16, -33)
+searchBox.clearFunc = function(self)
+	filterItems("")
+end
 searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
 searchBox:SetScript("OnEscapePressed", function(self)
 	self:SetText("")
@@ -324,36 +334,6 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 		filterItems(self:GetText())
 	end
 end)
-
-function Vortex:UpdateGuildBank()
-	for i = 1, 8 do
-		local tabIcon = DataStore:GetGuildBankTabIcon(selectedGuild, i)
-		tabs[i].button.icon:SetTexture(tabIcon)
-		tabs[i]:SetShown(tabIcon ~= nil)
-	end
-	local tab = DataStore:GetGuildBankTab(selectedGuild, selectedTab)
-	for i = 1, 98 do
-		if tab then
-			buttons[i]:SetItem(DataStore:GetSlotInfo(tab, i))
-		else
-			buttons[i]:SetItem(nil)
-		end
-	end
-	tabs[selectedTab].button:SetChecked(true)
-	title:SetText(DataStore:GetGuildBankTabName(selectedGuild, selectedTab))
-	titleBg:SetWidth(title:GetWidth() + 20)
-	titleBg:SetShown(selectedGuild ~= nil)
-	titleBgL:SetShown(selectedGuild ~= nil)
-	titleBgR:SetShown(selectedGuild ~= nil)
-	for i, v in ipairs(columns) do
-		v:SetShown(selectedGuild ~= nil)
-	end
-	for i, v in ipairs(buttons) do
-		v:SetShown(selectedGuild ~= nil)
-	end
-	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild) or 0)
-	filterItems(searchBox:GetText())
-end
 
 function Vortex:SelectGuild(guild)
 	if selectedTab then
@@ -368,4 +348,31 @@ end
 
 function Vortex:GetSelectedGuild()
 	return selectedGuild
+end
+
+function Vortex:UpdateGuildBank()
+	local hasSelectedGuild = (selectedGuild ~= nil)
+	for i, tabButton in ipairs(tabs) do
+		local tabIcon = DataStore:GetGuildBankTabIcon(selectedGuild, i)
+		tabButton.button.icon:SetTexture(tabIcon)
+		tabButton:SetShown(tabIcon ~= nil)
+	end
+	local tab = DataStore:GetGuildBankTab(selectedGuild, selectedTab)
+	for i, itemButton in ipairs(buttons) do
+		if tab then
+			itemButton:SetItem(DataStore:GetSlotInfo(tab, i))
+		end
+		itemButton:SetShown(hasSelectedGuild)
+	end
+	tabs[selectedTab].button:SetChecked(true)
+	title:SetText(DataStore:GetGuildBankTabName(selectedGuild, selectedTab))
+	titleBg:SetWidth(title:GetWidth() + 20)
+	titleBg:SetShown(hasSelectedGuild)
+	titleBgL:SetShown(hasSelectedGuild)
+	titleBgR:SetShown(hasSelectedGuild)
+	for i, v in ipairs(columns) do
+		v:SetShown(hasSelectedGuild)
+	end
+	MoneyFrame_Update(moneyFrame, DataStore:GetGuildBankMoney(selectedGuild) or 0)
+	filterItems(searchBox:GetText())
 end

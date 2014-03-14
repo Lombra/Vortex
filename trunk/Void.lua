@@ -1,6 +1,6 @@
-local addonName, addon = ...
+local _, Vortex = ...
 
-local Void = addon:NewModule("Void storage", {
+local Void = Vortex:NewModule("Void storage", {
 	altUI = true,
 	width = 491,
 })
@@ -30,14 +30,6 @@ function Void:PLAYER_LOGIN()
 	self:RegisterEvent("VOID_STORAGE_OPEN", OnVoidStorageOpened)
 end
 
-function Void:Refresh()
-	local character = DataStore:GetCharacter()
-	self:ClearCache(character)
-	if addon:GetSelectedModule() == self and addon:GetSelectedCharacter() == character then
-		self:Update(character)
-	end
-end
-
 function Void:GetItemCount(character, itemID)
 	return select(3, DataStore:GetContainerItemCount(character, itemID))
 end
@@ -51,7 +43,7 @@ bg:SetTexCoord(0.00195313, 0.47265625, 0.16601563, 0.50781250)
 local buttons = {}
 
 for i = 1, 80 do
-	local button = addon:CreateItemButton(Void.ui)
+	local button = Vortex:CreateItemButton(Void.ui)
 	button:SetID(i)
 	button:SetNormalTexture(nil)
 	if i == 1 then
@@ -82,4 +74,4 @@ for i = 1, 4 do
 	texture:SetTexture(0.1451, 0.0941, 0.1373, 0.8)
 end
 
-addon:RegisterContainerButtons("VoidStorage", buttons)
+Vortex:RegisterContainerButtons("VoidStorage", buttons)
