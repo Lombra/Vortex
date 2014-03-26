@@ -504,7 +504,7 @@ for i = 0, 11 do
 		button:SetScript("OnDragStart", nil)
 		button:SetScript("OnReceiveDrag", nil)
 		button.SplitStack = nil
-		button.UpdateTooltip = nil
+		button.UpdateTooltip = button.OnEnter
 		button.anchor = "ANCHOR_LEFT"
 		_G[frameName.."Item"..slot.."NewItemTexture"]:Hide()
 		bag.buttons[slot] = button
