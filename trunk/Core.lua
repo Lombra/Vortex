@@ -163,6 +163,7 @@ function Vortex:GetSelectedModule()
 end
 
 function Vortex:UpdateModule(module, character)
+	if self:IsSearching() then return end
 	local showList = not module.altUI or self.db.useListView
 	if showList then
 		self:SetList(module:GetList(character))

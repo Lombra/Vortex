@@ -17,10 +17,12 @@ end
 function Bags:Refresh()
 	local character = DataStore:GetCharacter()
 	self:ClearCache(character)
-	if Vortex:GetSelectedModule() == self and Vortex:GetSelectedCharacter() == character then
-		self:Update(character)
+	if Vortex:GetSelectedCharacter() == character then
 		for i, containerID in ipairs(self.containers) do
 			Vortex:UpdateContainer(containerID, character)
+		end
+		if Vortex:GetSelectedModule() == self then
+			self:Update(character)
 		end
 	end
 end

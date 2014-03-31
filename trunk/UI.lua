@@ -297,7 +297,11 @@ do
 				for i, v in ipairs(module:GetList(character)) do
 					local item = v.link or v.id
 					if not added[item] then
-						tinsert(list, v)
+						tinsert(list, {
+							id = v.id,
+							link = v.link,
+							count = v.count,
+						})
 						if item then
 							added[item] = #list
 						end
