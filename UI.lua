@@ -2,10 +2,68 @@ local addonName, Vortex = ...
 
 local LII = LibStub("LibItemInfo-1.0")
 local LIB = LibStub("LibItemButton")
+local LBI = LibStub("LibBabble-Inventory-3.0"):GetUnstrictLookupTable()
 
 local myCharacter
 local myRealm = GetRealmName()
 local myFaction = UnitFactionGroup("player")
+
+local t = {
+	["Bows"] = "Bow",
+	["Crossbows"] = "Crossbow",
+	["Daggers"] = "Dagger",
+	["Fist Weapons"] = "Fist Weapon",
+	["Guns"] = "Gun",
+	["One-Handed Axes"] = "Axe",
+	["One-Handed Maces"] = "Mace",
+	["One-Handed Swords"] = "Sword",
+	["Polearms"] = "Polearm",
+	["Shields"] = "Shield",
+	["Staves"] = "Staff",
+	["Two-Handed Axes"] = "Axe",
+	["Two-Handed Maces"] = "Mace",
+	["Two-Handed Swords"] = "Sword",
+	["Wands"] = "Wand",
+}
+
+local weaponTypes = {}
+
+for k, v in pairs(t) do
+	weaponTypes[LBI[k]] = LBI[v]
+end
+
+-- do not display an armor type for items that go into these slots
+local noArmor = {
+	INVTYPE_BODY = true,
+	INVTYPE_CLOAK = true,
+	INVTYPE_FINGER = true,
+	INVTYPE_HOLDABLE = true,
+	INVTYPE_NECK = true,
+	INVTYPE_TABARD = true,
+	INVTYPE_TRINKET = true,
+}
+
+-- do not display a slot for items of these types
+local noSlot = {
+	[LBI["Polearms"]] = true,
+	[LBI["Staves"]] = true,
+	[LBI["Wands"]] = true,
+	[LBI["Guns"]] = true,
+	[LBI["Crossbows"]] = true,
+	[LBI["Bows"]] = true,
+	[LBI["Shields"]] = true,
+}
+
+local noType = {
+	[LBI["Junk"]] = true,
+	[LBI["Miscellaneous"]] = true,
+	[LBI["Other"]] = true,
+}
+
+local yesType = {
+	[LBI["Consumable"]] = true,
+	[LBI["Trade Goods"]] = true,
+}
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 
@@ -518,16 +576,95 @@ end
 
 do
 	local BUTTON_HEIGHT = 26
-	local BUTTON_OFFSET = 3
 	
-	local function createButton(frame)
-		local button = CreateFrame("Button", nil, frame)
+	local scrollFrame = Vortex:CreateScrollFrame("Hybrid", frame.list)
+	scrollFrame:SetPoint("TOP", frame.Inset, 0, -4)
+	scrollFrame:SetPoint("LEFT", frame.Inset, 4, 0)
+	scrollFrame:SetPoint("BOTTOMRIGHT", frame.Inset, -20, 4)
+	scrollFrame:SetButtonHeight(BUTTON_HEIGHT)
+	scrollFrame.initialOffsetX = 1
+	scrollFrame.initialOffsetY = -2
+	scrollFrame.offsetY = -3
+	scrollFrame.getNumItems = function()
+		return #Vortex:GetList()
+	end
+	scrollFrame.updateButton = function(button, index)
+		local list = Vortex:GetList()
+		local object = list[index]
+		button.source:SetText(nil)
+		button.info:SetText(nil)
+		button.info2:SetText(nil)
+		button.label:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
+		button.label:SetPoint("TOPLEFT", button.icon, "TOPRIGHT", 4, 0)
+		button.source:SetPoint("TOPLEFT", button.icon, "RIGHT", 6, -2)
+		button.PostEnter = nil
+		button.item = nil
+		local selectedModule = Vortex:GetSelectedModule()
+		if not Vortex:IsSearching() and selectedModule.UpdateButton then
+			button.icon:SetTexture(nil)
+			button:ResetHeight()
+			selectedModule:UpdateButton(button, object)
+		else
+			local id = object.linkType and (object.linkType..":"..object.id)
+			local money = object.money
+			if money then
+				button.label:SetText(GetCoinText(money))
+				button.label:SetTextColor(1, 1, 1)
+				button.icon:SetTexture(GetCoinIcon(money))
+			else
+				local item = ItemInfo[id or object.id or object.link]
+				button.icon:SetTexture(not object.linkType and GetItemIcon(object.id) or item.icon)
+				if item then
+					local r, g, b = GetItemQualityColor(item.quality or 1)
+					local buttonHeight, owners, count = Vortex:GetItemSearchResultText(id or object.id or object.link)
+					local count = count or object.count
+					if (count and count > 1) then
+						button.label:SetFormattedText("%s |cffffffff(%d)|r", item.name, count)
+					else
+						button.label:SetText(item.name)
+					end
+					button.label:SetTextColor(r, g, b)
+					if Vortex:IsSearching() then
+						button.source:SetText(owners)
+					else
+						-- button.info:SetText(strjoin(", ", item.type, item.subType, _G[item.invType] or ""))
+						
+						local slot = not noSlot[item.subType] and _G[item.invType]
+						local type = yesType[item.type] and item.type
+						local itemType = not (noArmor[item.invType] or noType[item.subType]) and (weaponTypes[item.subType] or item.subType)
+						-- in some cases itemType is the same as slot, no need to show both
+						if type and itemType and type ~= itemType then
+							button.source:SetText(type..", "..itemType)
+						elseif itemType and slot and itemType ~= slot then
+							button.source:SetText(slot..", "..itemType)
+						elseif itemType ~= LBI["Consumable"] then
+							button.source:SetText(slot or itemType or "")
+						end
+					end
+					button:SetHeight(max(BUTTON_HEIGHT, 15 + button.source:GetHeight() + 1))
+				else
+					button.label:SetText(RETRIEVING_ITEM_INFO)
+					doUpdateList = true
+				end
+			end
+			button.item = id or object.link or object.id
+			
+			if button.showingTooltip then
+				button:OnEnter()
+			end
+			
+			if not Vortex:IsSearching() and selectedModule and selectedModule.OnButtonUpdate then
+				selectedModule:OnButtonUpdate(button, object)
+			end
+		end
+	end
+	scrollFrame.createButton = function(parent)
+		local button = CreateFrame("Button", nil, parent)
 		Vortex:SetupItemButton(button)
-		button.x = 28
-		button:SetHeight(BUTTON_HEIGHT)
 		button:SetPoint("RIGHT", -5, 0)
 		button:SetHighlightTexture([[Interface\QuestFrame\UI-QuestTitleHighlight]])
 		button:SetPushedTextOffset(0, 0)
+		button.x = 28
 
 		button.icon = button:CreateTexture()
 		button.icon:SetPoint("TOPLEFT", 3, -1)
@@ -555,119 +692,15 @@ do
 		
 		return button
 	end
+	scrollFrame:CreateButtons()
 	
-	local function updateButton(button, object)
-		local money = object.money
-		if money then
-			button.label:SetText(GetCoinText(money))
-			button.label:SetTextColor(1, 1, 1)
-			button.icon:SetTexture(GetCoinIcon(money))
-		else
-			local item = ItemInfo[(object.linkType and object.linkType..":"..object.id) or object.id or object.link]
-			button.icon:SetTexture(not object.linkType and GetItemIcon(object.id) or item.icon)
-			if item then
-				local r, g, b = GetItemQualityColor(item.quality or 1)
-				local buttonHeight, owners, count = Vortex:GetItemSearchResultText((object.linkType and object.linkType..":"..object.id) or object.id or object.link)
-				local count = count or object.count
-				if (count and count > 1) then
-					button.label:SetFormattedText("%s |cffffffff(%d)|r", item.name, count)
-				else
-					button.label:SetText(item.name)
-				end
-				button.label:SetTextColor(r, g, b)
-				button.source:SetText(owners)
-				button:SetHeight(max(BUTTON_HEIGHT, 15 + button.source:GetHeight() + 1))
-			else
-				button.label:SetText(RETRIEVING_ITEM_INFO)
-				doUpdateList = true
-			end
-		end
-		button.item = (object.linkType and object.linkType..":"..object.id) or object.link or object.id
-		
-		if button.showingTooltip then
-			if not isHeader then
-				button:OnEnter()
-			else
-				GameTooltip:Hide()
-			end
-		end
-	end
-	
-	local function update(self)
-		local list = Vortex:GetList()
-		local offset = self:GetOffset()
-		local buttons = self.buttons
-		local numButtons = #buttons
-		for i = 1, numButtons do
-			local index = offset + i
-			local object = list[index]
-			local button = buttons[i]
-			if object then
-				button.source:SetText(nil)
-				button.info:SetText(nil)
-				button.info2:SetText(nil)
-				button.label:SetTextColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
-				button.label:SetPoint("TOPLEFT", button.icon, "TOPRIGHT", 4, 0)
-				button.source:SetPoint("TOPLEFT", button.icon, "RIGHT", 6, -2)
-				button.item = nil
-				local selectedModule = Vortex:GetSelectedModule()
-				if not Vortex:IsSearching() and selectedModule.UpdateButton then
-					button.icon:SetTexture(nil)
-					button:SetHeight(BUTTON_HEIGHT)
-					selectedModule:UpdateButton(button, object)
-				else
-					updateButton(button, object)
-					if not Vortex:IsSearching() and selectedModule and selectedModule.OnButtonUpdate then
-						selectedModule:OnButtonUpdate(button, object)
-					end
-				end
-			end
-			button:SetShown(object ~= nil)
-		end
-		
-		local totalHeight = #list * self.buttonHeight
-		local displayedHeight = numButtons * self.buttonHeight
-		
-		if Vortex:IsSearching() then
-			totalHeight = 0
-			for i, item in ipairs(list) do
-				totalHeight = totalHeight + Vortex:GetItemSearchResultText((item.linkType and item.linkType..":"..item.id) or item.id or item.link)
-			end
-			displayedHeight = displayedHeight - 20
-		end
-		
-		HybridScrollFrame_Update(self, totalHeight, displayedHeight)
-	end
-	
-	local scrollFrame = Vortex:CreateScrollFrame("Hybrid", frame.list)
-	scrollFrame:SetPoint("TOP", frame.Inset, 0, -4)
-	scrollFrame:SetPoint("LEFT", frame.Inset, 4, 0)
-	scrollFrame:SetPoint("BOTTOMRIGHT", frame.Inset, -23, 4)
-	scrollFrame.update = function()
-		update(scrollFrame)
-	end
 	Vortex.scroll = scrollFrame
 	
 	local scrollBar = scrollFrame.scrollBar
 	scrollBar:ClearAllPoints()
-	scrollBar:SetPoint("TOP", frame.Inset, 0, -16)
-	scrollBar:SetPoint("BOTTOMLEFT", scrollFrame, "BOTTOMRIGHT", 0, 11)
+	scrollBar:SetPoint("TOPRIGHT", frame.Inset, 0, -18)
+	scrollBar:SetPoint("BOTTOMRIGHT", frame.Inset, 0, 16)
 	scrollBar.doNotHide = true
-	
-	local buttons = {}
-	scrollFrame.buttons = buttons
-	
-	for i = 1, (ceil(scrollFrame:GetHeight() / BUTTON_HEIGHT) + 1) do
-		local button = createButton(scrollFrame.scrollChild)
-		if i == 1 then
-			button:SetPoint("TOPLEFT", 1, -2)
-		else
-			button:SetPoint("TOPLEFT", buttons[i - 1], "BOTTOMLEFT", 0, -BUTTON_OFFSET)
-		end
-		buttons[i] = button
-	end
-	
-	HybridScrollFrame_CreateButtons(scrollFrame, nil, nil, nil, nil, nil, nil, -BUTTON_OFFSET)
 end
 
 local function onClick(self, characterKey)
@@ -686,7 +719,7 @@ button.initialize = function(self, level)
 		info.text = characterName
 		info.func = onClick
 		info.arg1 = characterKey
-		info.checked = characterKey == Vortex:GetSelectedCharacter()
+		info.checked = (characterKey == Vortex:GetSelectedCharacter())
 		UIDropDownMenu_AddButton(info, level)
 	end
 	local sortedRealms = {}

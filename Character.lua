@@ -5,11 +5,7 @@ local Character = Vortex:NewModule("Character", {
 })
 
 function Character:OnInitialize()
-	self:RegisterEvent("PLAYER_LOGIN")
-end
-
-function Character:PLAYER_LOGIN()
-	self:RegisterEvent("PLAYER_EQUIPMENT_CHANGED", "Refresh")
+	DataStore_Inventory.RegisterMessage(self, "DATASTORE_INVENTORY_SLOT_UPDATED", "Refresh")
 end
 
 function Character:BuildList(character)

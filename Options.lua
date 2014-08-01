@@ -1,223 +1,95 @@
 local VORTEX, Vortex = ...
 
-local frame = CreateFrame("Frame")
-frame.name = VORTEX
-InterfaceOptions_AddCategory(frame)
+local frame = Vortex:CreateOptionsFrame(VORTEX)
 Vortex.config = frame
-
-local title = frame:CreateFontString(nil, nil, "GameFontNormalLarge")
-title:SetPoint("TOPLEFT", 16, -16)
-title:SetPoint("RIGHT", -16, 0)
-title:SetJustifyH("LEFT")
-title:SetJustifyV("TOP")
-title:SetText(VORTEX)
-
-local function onClick(self)
-	local checked = self:GetChecked() ~= nil
-	PlaySound(checked and "igMainMenuOptionCheckBoxOn" or "igMainMenuOptionCheckBoxOff")
-	Vortex.db[self.setting] = checked
-	if self.func then
-		self.func()
-	end
-end
-
-local function newCheckButton(data)
-	local btn = CreateFrame("CheckButton", nil, frame, "OptionsBaseCheckButtonTemplate")
-	btn:SetPushedTextOffset(0, 0)
-	btn:SetScript("OnClick", onClick)
-	
-	local text = btn:CreateFontString(nil, nil, "GameFontHighlight")
-	text:SetPoint("LEFT", btn, "RIGHT", 0, 1)
-	btn:SetFontString(text)
-	
-	return btn
-end
 
 local options = {
 	{
+		type = "CheckButton",
 		text = "Add tooltip info",
+		tooltip = "Shows on item tooltips which characters or guilds has the item",
 		key = "tooltip",
-		tooltipText = "Shows on item tooltips which characters or guilds has the item",
 	},
 	{
+		type = "CheckButton",
 		text = "Tooltip modifier",
+		tooltip = "Adds tooltip info only when any modifier key is pressed",
 		key = "tooltipModifier",
-		tooltipText = "Adds tooltip info only when any modifier key is pressed",
 	},
 	{
+		type = "CheckButton",
 		text = "Add tooltip Battle.net info",
+		tooltip = "Includes characters from other realms for Battle.net account bound items",
 		key = "tooltipBNet",
-		tooltipText = "Includes characters from other realms for Battle.net account bound items",
 	},
 	{
+		type = "CheckButton",
 		text = "Add tooltip guild info",
+		tooltip = "Includes guild bank",
 		key = "tooltipGuild",
-		tooltipText = "Includes guild bank",
 	},
 	{
+		type = "CheckButton",
 		text = "Use list view",
+		tooltip = "Shows all modules as lists instead of their default UI",
 		key = "useListView",
 		func = function()
-			if not Vortex.isSearching then
+			if not Vortex.isSearching and Vortex:GetSelectedModule() then
 				Vortex:SelectModule(Vortex:GetSelectedModule().name)
 				Vortex:CloseAllContainers()
 			end
 		end,
-		tooltipText = "Shows all modules as lists instead of their default UI"
 	},
 	{
+		type = "CheckButton",
 		text = "Search guild banks",
+		tooltip = "Includes guild banks in search results",
 		key = "searchGuild",
-		tooltipText = "Includes guild banks in search results"
+	},
+	{
+		type = "Dropdown",
+		text = "Default module",
+		tooltip = "Module to be selected each time you login.",
+		key = "defaultModule",
+		menuList = Vortex.modulesSorted,
+		properties = {
+			text = function(value) return Vortex:GetModule(value).label or value end,
+		},
+	},
+	{
+		type = "Dropdown",
+		text = "Default search scope",
+		tooltip = "Module to be selected ",
+		key = "defaultSearch",
+		menuList = {
+			"char",
+			"realm",
+			"all",
+		},
+		properties = {
+			text = {
+				char = "Character",
+				realm = "Realm",
+				all = "All",
+			},
+		},
 	},
 }
 
-function Vortex:LoadSettings()
-	for i, option in ipairs(options) do
-		local button = newCheckButton()
-		if i == 1 then
-			button:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
-		else
-			button:SetPoint("TOP", options[i - 1].button, "BOTTOM", 0, -8)
-		end
-		button:SetText(option.text)
-		button:SetChecked(self.db[option.key])
-		button.setting = option.key
-		button.tooltipText = option.tooltipText
-		button.func = option.func
-		option.button = button
-	end
-	
-	local function onClick(self, module)
-		Vortex.db.defaultModule = module
-		self.owner:SetText(module)
-	end
-	
-	local defaultModule = Vortex:CreateDropdown("Frame", frame)
-	defaultModule:SetWidth(128)
-	defaultModule:SetPoint("TOPLEFT", options[#options].button, "BOTTOMLEFT", -12, -24)
-	defaultModule:JustifyText("LEFT")
-	defaultModule:SetLabel("Default module")
-	defaultModule:SetText(self.db.defaultModule or "All")
-	defaultModule.initialize = function(self)
-		for i, v in ipairs(Vortex.modulesSorted) do
-			local info = UIDropDownMenu_CreateInfo()
-			info.text = v
-			info.func = onClick
-			info.arg1 = v
-			info.checked = (v == Vortex.db.defaultModule)
-			info.owner = self
-			self:AddButton(info)
-		end
-	end
-	
-	local scopes = {
-		"Character",
-		"Realm",
-		"All",
-	}
-	
-	local function onClick(self, searchScope)
-		Vortex.db.defaultSearch = searchScope
-		self.owner:SetText(searchScope)
-	end
-	
-	local defaultSearch = Vortex:CreateDropdown("Frame", frame)
-	defaultSearch:SetWidth(128)
-	defaultSearch:SetPoint("TOP", defaultModule, "BOTTOM", 0, -16)
-	defaultSearch:JustifyText("LEFT")
-	defaultSearch:SetLabel("Default search scope")
-	defaultSearch:SetText(self.db.defaultSearch)
-	defaultSearch.initialize = function(self)
-		for i, v in ipairs(scopes) do
-			local info = UIDropDownMenu_CreateInfo()
-			info.text = v
-			info.func = onClick
-			info.arg1 = v
-			info.checked = (v == Vortex.db.defaultSearch)
-			info.owner = self
-			self:AddButton(info)
-		end
-	end
-	
-	self:SetSearchScope(self.db.defaultSearch)
-	
-	local sortedGuilds = {}
-	
-	local function onClickCharacter(self, character)
-		local accountKey, realmKey, characterKey = strsplit(".", character)
-		StaticPopup_Show("VORTEX_DELETE_CHARACTER", characterKey, realmKey, character)
-		CloseDropDownMenus()
-	end
-	
-	local function onClickGuild(self, guild)
-		local accountKey, realmKey, guildKey = strsplit(".", guild)
-		StaticPopup_Show("VORTEX_DELETE_GUILD", guildKey, realmKey, guild)
-		CloseDropDownMenus()
-	end
-	
-	local button = CreateFrame("Button", "VortexPurgeDataButton", frame, "UIMenuButtonStretchTemplate")
-	button:SetWidth(96)
-	button:SetPoint("TOP", defaultSearch, "BOTTOM", 0, -16)
-	button.rightArrow:Show()
-	button:SetText("Purge data")
-	button:SetScript("OnClick", function(self)
-		self.menu:Toggle()
-	end)
-	
-	button.menu = Vortex:CreateDropdown("Menu")
-	button.menu.relativeTo = button
-	button.menu.relativePoint = "TOPRIGHT"
-	button.menu.xOffset = 0
-	button.menu.yOffset = 0
-	button.menu.initialize = function(self, level)
-		for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
-			if characterKey ~= DataStore:GetCharacter() then
-				local accountKey, realmKey, characterName = strsplit(".", characterKey)
-				local info = UIDropDownMenu_CreateInfo()
-				info.text = characterName
-				info.func = onClickCharacter
-				info.arg1 = characterKey
-				info.notCheckable = true
-				UIDropDownMenu_AddButton(info, level)
-			end
-		end
-		wipe(sortedGuilds)
-		local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
-		for guildName, guildKey in pairs(guilds) do
-			if DataStore:GetGuildBankFaction(guildKey) then
-				tinsert(sortedGuilds, guildName)
-			end
-		end
-		sort(sortedGuilds)
-		for i, guildName in ipairs(sortedGuilds) do
-			local guildKey = guilds[guildName]
-			local info = UIDropDownMenu_CreateInfo()
-			info.text = "<"..guildName..">"
-			info.func = onClickGuild
-			info.arg1 = guildKey
-			info.colorCode = "|cff56a3ff"
-			info.notCheckable = true
-			UIDropDownMenu_AddButton(info, level)
-		end
-		local sortedRealms = {}
-		if level == 1 then
-			for realm in pairs(DataStore:GetRealms()) do
-				if realm ~= GetRealmName() then
-					tinsert(sortedRealms, realm)
-				end
-			end
-			sort(sortedRealms)
-			for i, realm in ipairs(sortedRealms) do
-				local info = UIDropDownMenu_CreateInfo()
-				info.text = realm
-				info.notCheckable = true
-				info.hasArrow = true
-				info.keepShownOnClick = true
-				UIDropDownMenu_AddButton(info, level)
-			end
-		end
-	end
+frame:CreateOptions(options)
+
+local sortedGuilds = {}
+
+local function onClickCharacter(self, character)
+	local accountKey, realmKey, characterKey = strsplit(".", character)
+	StaticPopup_Show("VORTEX_DELETE_CHARACTER", characterKey, realmKey, character)
+	CloseDropDownMenus()
+end
+
+local function onClickGuild(self, guild)
+	local accountKey, realmKey, guildKey = strsplit(".", guild)
+	StaticPopup_Show("VORTEX_DELETE_GUILD", guildKey, realmKey, guild)
+	CloseDropDownMenus()
 end
 
 StaticPopupDialogs["VORTEX_DELETE_CHARACTER"] = {
@@ -239,3 +111,72 @@ StaticPopupDialogs["VORTEX_DELETE_GUILD"] = {
 	end,
 	hideOnEscape = true,
 }
+
+local button = Vortex:CreateButton(frame)
+button:SetWidth(96)
+button:SetPoint("TOP", frame.controls[#frame.controls], "BOTTOM", 0, -16)
+button.rightArrow:Show()
+button:SetText("Purge data")
+button:SetScript("OnClick", function(self)
+	self.menu:Toggle()
+end)
+
+button.menu = Vortex:CreateDropdown("Menu")
+button.menu.relativeTo = button
+button.menu.relativePoint = "TOPRIGHT"
+button.menu.xOffset = 0
+button.menu.yOffset = 0
+button.menu.initialize = function(self, level)
+	for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
+		if characterKey ~= DataStore:GetCharacter() then
+			local accountKey, realmKey, characterName = strsplit(".", characterKey)
+			local info = UIDropDownMenu_CreateInfo()
+			info.text = characterName
+			info.func = onClickCharacter
+			info.arg1 = characterKey
+			info.notCheckable = true
+			self:AddButton(info, level)
+		end
+	end
+	wipe(sortedGuilds)
+	local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
+	for guildName, guildKey in pairs(guilds) do
+		if DataStore:GetGuildBankFaction(guildKey) then
+			tinsert(sortedGuilds, guildName)
+		end
+	end
+	sort(sortedGuilds)
+	for i, guildName in ipairs(sortedGuilds) do
+		local guildKey = guilds[guildName]
+		local info = UIDropDownMenu_CreateInfo()
+		info.text = "<"..guildName..">"
+		info.func = onClickGuild
+		info.arg1 = guildKey
+		info.colorCode = "|cff56a3ff"
+		info.notCheckable = true
+		self:AddButton(info, level)
+	end
+	local sortedRealms = {}
+	if level == 1 then
+		for realm in pairs(DataStore:GetRealms()) do
+			if realm ~= GetRealmName() then
+				tinsert(sortedRealms, realm)
+			end
+		end
+		sort(sortedRealms)
+		for i, realm in ipairs(sortedRealms) do
+			local info = UIDropDownMenu_CreateInfo()
+			info.text = realm
+			info.notCheckable = true
+			info.hasArrow = true
+			info.keepShownOnClick = true
+			self:AddButton(info, level)
+		end
+	end
+end
+
+function Vortex:LoadSettings()
+	frame:SetDatabase(self.db)
+	frame:SetupControls()
+	self:SetSearchScope(self.db.defaultSearch)
+end

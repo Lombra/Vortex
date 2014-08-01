@@ -7,11 +7,13 @@ for i = 0, 4 do
 end
 
 function Bags:OnInitialize()
-	self:RegisterEvent("PLAYER_LOGIN")
+	DataStore_Inventory.RegisterMessage(self, "DATASTORE_CONTAINER_UPDATED")
 end
 
-function Bags:PLAYER_LOGIN()
-	self:RegisterEvent("BAG_UPDATE_DELAYED", "Refresh")
+function Bags:DATASTORE_CONTAINER_UPDATED(event, bagID)
+	if self:HasContainer(bagID) then
+		self:Refresh()
+	end
 end
 
 function Bags:Refresh()

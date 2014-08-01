@@ -3,35 +3,7 @@ local _, Vortex = ...
 local Mail = Vortex:NewModule("Mail")
 
 function Mail:OnInitialize()
-	self:RegisterEvent("PLAYER_LOGIN")
-end
-
-local function OnMailInboxUpdate(self)
-	-- process only one occurence of the event, right after MAIL_SHOW
-	self:UnregisterEvent("MAIL_INBOX_UPDATE")
-	self:Refresh()
-end
-
-local function OnMailClosed(self)
-	self.isOpen = nil
-	self:UnregisterEvent("MAIL_CLOSED")
-	self:Refresh()
-end
-
-local function OnMailShow(self)
-	-- the event may be triggered multiple times, exit if the mailbox is already open
-	if self.isOpen then return end	
-	
-	self:Refresh()
-	self:RegisterEvent("MAIL_CLOSED", OnMailClosed)
-	-- self:RegisterEvent("MAIL_INBOX_UPDATE", OnMailInboxUpdate)
-	self:RegisterEvent("MAIL_INBOX_UPDATE", "Refresh")
-
-	self.isOpen = true
-end
-
-function Mail:PLAYER_LOGIN()
-	self:RegisterEvent("MAIL_SHOW", OnMailShow)
+	DataStore_Mails.RegisterMessage(self, "DATASTORE_MAILBOX_UPDATED", "Refresh")
 end
 
 function Mail:BuildList(character)
@@ -78,6 +50,16 @@ function Mail.sort(a, b)
 end
 
 hooksecurefunc("SendMail", function(recipient)
+	local name, realm = strsplit("-", recipient)
+	if realm then
+		for k in pairs(DataStore:GetRealms()) do
+			if strlower(gsub(k, "[ -]", "")) == strlower(gsub(realm, "[ -]", "")) then
+				realm = k
+				break
+			end
+		end
+	end
+	
 	for characterName, characterKey in pairs(DataStore:GetCharacters()) do
 		if strlower(characterName) == strlower(recipient) then
 			Mail:ClearCache(characterKey)
@@ -88,6 +70,16 @@ end)
 
 hooksecurefunc("ReturnInboxItem", function(index)
 	local _, stationaryIcon, mailSender, mailSubject, mailMoney, _, _, numAttachments = GetInboxHeaderInfo(index)
+	
+	local name, realm = strsplit("-", mailSender)
+	if realm then
+		for k in pairs(DataStore:GetRealms()) do
+			if strlower(gsub(k, "[ -]", "")) == strlower(gsub(realm, "[ -]", "")) then
+				realm = k
+				break
+			end
+		end
+	end
 	
 	for characterName, characterKey in pairs(DataStore:GetCharacters()) do
 		if strlower(characterName) == strlower(mailSender) then

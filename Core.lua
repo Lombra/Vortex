@@ -10,9 +10,20 @@ local myRealm = GetRealmName()
 BINDING_HEADER_VORTEX = "Vortex"
 BINDING_NAME_VORTEX_TOGGLE = "Toggle Vortex"
 
+local slashCmdHandlers = {
+	config = function() InterfaceOptionsFrame_OpenToCategory(Vortex.config) end,
+}
+
 SlashCmdList["VORTEX"] = function(msg)
-	ToggleFrame(Vortex.frame)
+	msg = msg:trim():lower()
+	local slashCmdHandler = slashCmdHandlers[msg]
+	if not slashCmdHandler then
+		ToggleFrame(Vortex.frame)
+	else
+		slashCmdHandler()
+	end
 end
+
 SLASH_VORTEX1 = "/vortex"
 SLASH_VORTEX2 = "/vx"
 
@@ -27,31 +38,42 @@ local dataobj = LibStub("LibDataBroker-1.1"):NewDataObject("Vortex", {
 			InterfaceOptionsFrame_OpenToCategory(Vortex.config)
 		end
 	end,
-	-- OnTooltipShow = function()
-		-- Vortex:ShowTooltip(k)
-	-- end
 })
 
 Vortex.modulesSorted = {}
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 
+local function copyDefaults(src, dst)
+	if not src then return {} end
+	if not dst then dst = {} end
+	for k, v in pairs(src) do
+		if type(v) == "table" then
+			dst[k] = copyDefaults(v, dst[k])
+		elseif type(v) ~= type(dst[k]) then
+			dst[k] = v
+		end
+	end
+	return dst
+end
+
 local defaults = {
-	global = {
-		tooltip = true,
-		tooltipBNet = true,
-		tooltipGuild = true,
-		tooltipModifier = false,
-		useListView = false,
-		searchGuild = true,
-		defaultModule = "All",
-		defaultSearch = "Realm",
-	},
+	tooltip = true,
+	tooltipBNet = true,
+	tooltipGuild = true,
+	tooltipModifier = false,
+	useListView = false,
+	searchGuild = true,
+	defaultModule = "All",
+	defaultSearch = "realm",
 }
 
 function Vortex:OnInitialize()
-	self.db = LibStub("AceDB-3.0"):New("VortexDB", defaults)
-	self.db = self.db.global
+	if VortexDB and VortexDB.profileKeys then
+		wipe(VortexDB)
+	end
+	VortexDB = copyDefaults(defaults, VortexDB)
+	self.db = VortexDB
 	self:LoadSettings()
 	local character = DataStore:GetCharacter()
 	self.selectedCharacter = character
@@ -84,6 +106,13 @@ local moduleMethods = {
 	end,
 	IncludeContainer = function(self, containerID)
 		tinsert(self.containers, containerID)
+	end,
+	HasContainer = function(self, containerID)
+		for i, v in ipairs(self.containers) do
+			if v == containerID then
+				return true
+			end
+		end
 	end,
 	BuildList = function(self, character)
 		local list = {}
@@ -228,4 +257,8 @@ function Vortex:DeleteGuild(guild)
 		self:SelectGuild(DataStore:GetGuild())
 	end
 	self:ClearSearchResultsCache()
+end
+
+function Vortex:AddSlashCommand(command, handler)
+	slashCmdHandlers[command] = handler
 end
