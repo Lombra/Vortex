@@ -3,25 +3,7 @@ local _, Vortex = ...
 local Auctions = Vortex:NewModule("Auctions")
 
 function Auctions:OnInitialize()
-	self:RegisterEvent("PLAYER_LOGIN")
-end
-
-local function OnAuctionHouseClosed(self)
-	self:UnregisterEvent("AUCTION_MULTISELL_START")
-	self:UnregisterEvent("AUCTION_MULTISELL_UPDATE")
-	self:UnregisterEvent("AUCTION_HOUSE_CLOSED")
-	self:Refresh()
-end
-
-local function OnAuctionHouseShow(self)
-	-- when going to the AH, listen to multi-sell
-	self:RegisterEvent("AUCTION_MULTISELL_START", "Refresh")
-	self:RegisterEvent("AUCTION_MULTISELL_UPDATE", "Refresh")
-	self:RegisterEvent("AUCTION_HOUSE_CLOSED", OnAuctionHouseClosed)
-end
-
-function Auctions:PLAYER_LOGIN()
-	self:RegisterEvent("AUCTION_HOUSE_SHOW", OnAuctionHouseShow)
+	DataStore_Auctions.RegisterMessage(self, "DATASTORE_AUCTIONS_UPDATED", "Refresh")
 end
 
 function Auctions:BuildList(character)

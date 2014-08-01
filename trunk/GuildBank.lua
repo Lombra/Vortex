@@ -31,35 +31,6 @@ frame:SetScript("OnEvent", function(self, event, ...)
 	self[event](self, ...)
 end)
 
-local function OnGuildBankFrameClosed(self)
-	self:UnregisterEvent("GUILDBANKFRAME_CLOSED")
-	self:UnregisterEvent("GUILDBANKBAGSLOTS_CHANGED")
-end
-
-local function OnGuildBankBagSlotsChanged()
-	-- ScanContainer(GetCurrentGuildBankTab(), GUILDBANK)
-	-- ScanGuildBankInfo()
-end
-
-local function OnGuildBankFrameOpened()
-	self:RegisterEvent("GUILDBANKFRAME_CLOSED", OnGuildBankFrameClosed)
-	self:RegisterEvent("GUILDBANKBAGSLOTS_CHANGED", OnGuildBankBagSlotsChanged)
-	
-	local thisGuild = GetThisGuild()
-	if thisGuild then
-		thisGuild.money = GetGuildBankMoney()
-		thisGuild.faction = UnitFactionGroup("player")
-	end
-end
-
--- hooksecurefunc(Vortex, "OnInitialize", function(self)
-	-- self:RegisterEvent("GUILDBANKFRAME_OPENED", OnGuildBankFrameOpened)
--- end)
-
-frame.GUILDBANKFRAME_OPENED = OnGuildBankFrameOpened
-frame.GUILDBANKFRAME_CLOSED = OnGuildBankFrameClosed
-frame.GUILDBANKBAGSLOTS_CHANGED = OnGuildBankBagSlotsChanged
-
 local columns = {}
 local buttons = {}
 
@@ -277,7 +248,7 @@ guildMenu.initialize = function(self, level)
 	if level == 1 then
 		wipe(sortedGuilds)
 		for realm in pairs(DataStore:GetRealms()) do
-			if realm ~= GetRealmName() then
+			if realm ~= GetRealmName() and next(DataStore:GetGuilds(realm)) then
 				tinsert(sortedGuilds, realm)
 			end
 		end

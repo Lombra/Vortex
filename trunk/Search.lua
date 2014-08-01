@@ -1,6 +1,4 @@
-local addonName, Vortex = ...
-
-local Libra = LibStub("Libra")
+local _, Vortex = ...
 
 local ItemInfo = Vortex.ItemInfo
 
@@ -9,7 +7,7 @@ local myRealm = GetRealmName()
 local BUTTON_HEIGHT = 26
 local BUTTON_OFFSET = 3
 
-local searchFilter = "Realm"
+local searchFilter = "realm"
 
 local strfind = string.find
 local strlower = string.lower
@@ -18,15 +16,19 @@ local gsub = gsub
 local strsplit = strsplit
 
 local function onEditFocusLost(self)
-	local text = self:GetText()
-	if not Vortex:GetFilter("name") then
-		if searchFilter == "UI" then
-			local module = Vortex:GetSelectedModule()
-			module:Search()
-		elseif Vortex.isSearching then
-			Vortex:SetList(nil)
-		end
+	if Vortex:GetFilter("name") then
+		self:SetTextColor(1, 1, 1)
+		self.searchIcon:SetVertexColor(1, 1, 1)
 	end
+	-- local text = self:GetText()
+	-- if not Vortex:GetFilter("name") then
+		-- if searchFilter == "UI" then
+			-- local module = Vortex:GetSelectedModule()
+			-- module:Search()
+		-- elseif Vortex.isSearching then
+			-- Vortex:SetList(nil)
+		-- end
+	-- end
 end
 
 local function onEditFocusGained(self)
@@ -34,14 +36,16 @@ local function onEditFocusGained(self)
 	end
 end
 
-local searchBox = Libra:CreateEditbox(Vortex.frame.character, true)
+local searchBox = Vortex:CreateEditbox(Vortex.frame.character, true)
 searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", Vortex.frame, -16, -33)
 searchBox.clearFunc = function()
-	Vortex:ClearFilter("name")
-	Vortex:SetList(nil)
+	-- Vortex:ClearFilter("name")
+	-- Vortex:SetList(nil)
+	Vortex:StopSearch()
+	Vortex:SelectModule(Vortex:GetSelectedModule().name)
 end
--- searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
+searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
 -- searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
 searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
 searchBox:SetScript("OnTextChanged", function(self, isUserInput)
@@ -58,7 +62,8 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	else
 		Vortex:ClearFilter("name")
 		if searchFilter ~= "UI" then
-			Vortex:SetList(nil)
+			Vortex:StopSearch(true)
+			Vortex:SelectModule(Vortex:GetSelectedModule().name)
 			return
 		end
 	end
@@ -76,30 +81,55 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	Vortex:ApplyFilters()
 end)
 
+SlashCmdList["VORTEX_SEARCH"] = function(msg)
+	if msg:trim() == "" then return end
+	ShowUIPanel(Vortex.frame)
+	searchBox:SetText(msg)
+	searchBox.clearButton:Show()
+	Vortex:SetFilter("name", msg)
+	Vortex:Search()
+	Vortex.list = Vortex:GetCache() or empty
+	Vortex.filteredList = nil
+	Vortex:ApplyFilters()
+end
+
+SLASH_VORTEX_SEARCH1 = "/vxs"
+
 local searchMenuOptions = {
 	-- "UI",
-	"Character",
-	"Realm",
-	"All",
+	"char",
+	"realm",
+	"all",
+}
+
+local searchMenuText = {
+	char = format("Current character (%s)", UnitName("player")),
+	realm = format("Current realm (%s)", myRealm),
+	all = "All realms",
+}
+
+local searchMenuText2 = {
+	char = "Character",
+	realm = "Realm",
+	all = "All realms",
 }
 
 local function onClick(self, arg1)
 	Vortex:SetSearchScope(arg1)
 end
 
-local searchScopeMenu = Libra:CreateDropdown("Frame", Vortex.frame.character)
+local searchScopeMenu = Vortex:CreateDropdown("Frame", Vortex.frame.character)
 searchScopeMenu:SetWidth(128)
 searchScopeMenu:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
 searchScopeMenu:SetText("|cffffd200Search:|r "..searchFilter)
 searchScopeMenu.initialize = function(self, level)
 	for i, option in ipairs(searchMenuOptions) do
 		local info = UIDropDownMenu_CreateInfo()
-		info.text = option
+		info.text = searchMenuText[option]
 		info.func = onClick
 		info.arg1 = option
-		info.checked = option == searchFilter
-		info.owner = self
-		UIDropDownMenu_AddButton(info, level)
+		info.checked = (option == searchFilter)
+		self:AddButton(info, level)
 	end
 end
 
@@ -128,10 +158,10 @@ filterBar.clear:SetScript("OnLeave", function(self)
 	self:SetAlpha(0.5)
 end)
 filterBar.clear:SetScript("OnClick", function(self)
-	searchBox:SetText(SEARCH)
-	searchBox:ClearFocus()
-	searchBox.clearButton:Hide()
-	Vortex:ClearFilter("name")
+	-- searchBox:SetText(SEARCH)
+	-- searchBox:ClearFocus()
+	-- searchBox.clearButton:Hide()
+	-- Vortex:ClearFilter("name")
 	Vortex:StopSearch()
 	Vortex:SelectModule(Vortex:GetSelectedModule().name)
 end)
@@ -192,26 +222,28 @@ function Vortex:SearchContainer(containerID, character)
 end
 
 local function dynamic(offset)
-	local heightLeft = offset
+	local height = 0
 	
 	for i, item in ipairs(Vortex:GetList()) do
 		local buttonHeight = Vortex:GetItemSearchResultText((item.linkType and item.linkType..":"..item.id) or item.id or item.link)
 		
-		if heightLeft - buttonHeight <= 0 then
-			return i - 1, heightLeft
+		if offset and height + buttonHeight >= offset then
+			return i - 1, offset - height
 		else
-			heightLeft = heightLeft - buttonHeight
+			height = height + buttonHeight
 		end
 	end
+	return height
 end
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 function Vortex:Search()
 	self.isSearching = true
 	filterBar:Show()
-	filterBar.text:SetText("Searching in "..searchFilter)
 	self.scroll:SetPoint("TOP", filterBar, "BOTTOM")
 	self.scroll.dynamic = dynamic
+	searchBox:SetTextColor(1, 1, 1)
+	searchBox.searchIcon:SetVertexColor(1, 1, 1)
 	self.frame.ui:Hide()
 	self.frame.list:Show()
 	self.frame:SetWidth(PANEL_DEFAULT_WIDTH + LIST_PANEL_WIDTH)
@@ -220,15 +252,19 @@ function Vortex:Search()
 	module.button.highlight:SetDesaturated(true)
 end
 
-function Vortex:StopSearch()
+function Vortex:StopSearch(keepFocus)
 	if not self:IsSearching() then return end
 	self.isSearching = false
 	filterBar:Hide()
 	self.scroll:SetPoint("TOP", self.frame.Inset, 0, -4)
 	self.scroll.dynamic = nil
-	searchBox:SetText(SEARCH)
-	searchBox:ClearFocus()
-	searchBox.clearButton:Hide()
+	if not keepFocus then
+		searchBox:SetText(SEARCH)
+		searchBox:ClearFocus()
+		searchBox.clearButton:Hide()
+		searchBox:SetTextColor(0.5, 0.5, 0.5)
+		searchBox.searchIcon:SetVertexColor(0.6, 0.6, 0.6)
+	end
 	self:ClearFilter("name")
 	-- local module = self:GetSelectedModule()
 	-- module:Search()
@@ -241,7 +277,7 @@ end
 function Vortex:SetSearchScope(scope)
 	searchFilter = scope
 	self:ClearSearchResultsCache()
-	searchScopeMenu:SetText("|cffffd200Search:|r "..scope)
+	searchScopeMenu:SetText("|cffffd200Search:|r "..searchMenuText2[scope])
 	local module = self:GetSelectedModule()
 	local character = self:GetSelectedCharacter()
 	if scope ~= "UI" then
@@ -340,11 +376,11 @@ function Vortex:GetCache()
 		doUpdateResults = nil
 		wipe(resultsCache)
 		wipe(searchResults)
-		if searchFilter == "Character" then
+		if searchFilter == "char" then
 			mergeCharacterItems(resultsCache, self:GetSelectedCharacter())
-		elseif searchFilter == "Realm" then
+		elseif searchFilter == "realm" then
 			mergeItems(resultsCache)
-		elseif searchFilter == "All" then
+		elseif searchFilter == "all" then
 			for realm in pairs(DataStore:GetRealms()) do
 				mergeItems(resultsCache, realm)
 			end
@@ -468,6 +504,9 @@ function Vortex:ApplyFilters()
 		end
 	end
 	self:SetFilteredList(filteredList)
+	if self:IsSearching() then
+		filterBar.text:SetText(#self:GetList().." search results")
+	end
 end
 
 function Vortex:SetFilter(filter, arg)

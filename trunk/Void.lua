@@ -8,26 +8,13 @@ local Void = Vortex:NewModule("Void storage", {
 Void:IncludeContainer("VoidStorage")
 
 function Void:OnInitialize()
-	self:RegisterEvent("PLAYER_LOGIN")
+	DataStore_Inventory.RegisterMessage(self, "DATASTORE_CONTAINER_UPDATED")
 end
 
-local function OnVoidStorageClosed(self)
-	self:UnregisterEvent("VOID_STORAGE_CLOSE")
-	self:UnregisterEvent("VOID_STORAGE_UPDATE")
-	self:UnregisterEvent("VOID_STORAGE_CONTENTS_UPDATE")
-	self:UnregisterEvent("VOID_TRANSFER_DONE")
-end
-
-local function OnVoidStorageOpened(self)
-	self:Refresh()
-	self:RegisterEvent("VOID_STORAGE_CLOSE", OnVoidStorageClosed)
-	self:RegisterEvent("VOID_STORAGE_UPDATE", "Refresh")
-	self:RegisterEvent("VOID_STORAGE_CONTENTS_UPDATE", "Refresh")
-	self:RegisterEvent("VOID_TRANSFER_DONE", "Refresh")
-end
-
-function Void:PLAYER_LOGIN()
-	self:RegisterEvent("VOID_STORAGE_OPEN", OnVoidStorageOpened)
+function Void:DATASTORE_CONTAINER_UPDATED(event, bagID)
+	if self:HasContainer(bagID) then
+		self:Refresh()
+	end
 end
 
 function Void:GetItemCount(character, itemID)

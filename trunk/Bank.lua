@@ -11,27 +11,13 @@ for i = 1, NUM_BANKBAGSLOTS do
 end
 
 function Bank:OnInitialize()
-	self:RegisterEvent("PLAYER_LOGIN")
+	DataStore_Inventory.RegisterMessage(self, "DATASTORE_CONTAINER_UPDATED")
 end
 
-local function OnBankFrameClosed(self)
-	self:UnregisterEvent("BANKFRAME_CLOSED")
-	self:UnregisterEvent("PLAYERBANKSLOTS_CHANGED")
-end
-
-local function OnPlayerBankSlotsChanged(self, event, slotID)
-	self:Refresh()
-end
-
-local function OnBankFrameOpened(self)
-	self:Refresh()
-	self:RegisterEvent("BANKFRAME_CLOSED", OnBankFrameClosed)
-	self:RegisterEvent("PLAYERBANKSLOTS_CHANGED", OnPlayerBankSlotsChanged)
-end
-
-function Bank:PLAYER_LOGIN()
-	self:RegisterEvent("BAG_UPDATE_DELAYED", "Refresh")
-	self:RegisterEvent("BANKFRAME_OPENED", OnBankFrameOpened)
+function Bank:DATASTORE_CONTAINER_UPDATED(event, bagID)
+	if self:HasContainer(bagID) then
+		self:Refresh()
+	end
 end
 
 function Bank:GetItemCount(character, itemID)
