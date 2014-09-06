@@ -51,34 +51,14 @@ local options = {
 		text = "Default module",
 		tooltip = "Module to be selected each time you login.",
 		key = "defaultModule",
-		menuList = Vortex.modulesSorted,
+		menuList = Vortex.sortedModules,
 		properties = {
-			text = function(value) return Vortex:GetModule(value).label or value end,
-		},
-	},
-	{
-		type = "Dropdown",
-		text = "Default search scope",
-		tooltip = "Module to be selected ",
-		key = "defaultSearch",
-		menuList = {
-			"char",
-			"realm",
-			"all",
-		},
-		properties = {
-			text = {
-				char = "Character",
-				realm = "Realm",
-				all = "All",
-			},
+			text = function(value) return Vortex:GetModuleTitle(value) end,
 		},
 	},
 }
 
 frame:CreateOptions(options)
-
-local sortedGuilds = {}
 
 local function onClickCharacter(self, character)
 	local accountKey, realmKey, characterKey = strsplit(".", character)
@@ -129,37 +109,39 @@ button.menu.yOffset = 0
 button.menu.initialize = function(self, level)
 	for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 		if characterKey ~= DataStore:GetCharacter() then
-			local accountKey, realmKey, characterName = strsplit(".", characterKey)
+			local account, realm, characterName = strsplit(".", characterKey)
 			local info = UIDropDownMenu_CreateInfo()
-			info.text = characterName
+			if Vortex:IsConnectedRealm(realm) then
+				info.text = characterName.." - "..realm
+			else
+				info.text = characterName
+			end
 			info.func = onClickCharacter
 			info.arg1 = characterKey
 			info.notCheckable = true
 			self:AddButton(info, level)
 		end
 	end
-	wipe(sortedGuilds)
-	local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
-	for guildName, guildKey in pairs(guilds) do
-		if DataStore:GetGuildBankFaction(guildKey) then
-			tinsert(sortedGuilds, guildName)
+	for i, guildKey in ipairs(Vortex:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)) do
+		if guildKey ~= DataStore:GetGuild() and DataStore:GetGuildBankFaction(guildKey) then
+			local account, realm, guildName = strsplit(".", guildKey)
+			local info = UIDropDownMenu_CreateInfo()
+			if Vortex:IsConnectedRealm(realm) then
+				info.text = "<"..guildName.."> - "..realm
+			else
+				info.text = "<"..guildName..">"
+			end
+			info.func = onClickGuild
+			info.arg1 = guildKey
+			info.colorCode = "|cff56a3ff"
+			info.notCheckable = true
+			self:AddButton(info, level)
 		end
 	end
-	sort(sortedGuilds)
-	for i, guildName in ipairs(sortedGuilds) do
-		local guildKey = guilds[guildName]
-		local info = UIDropDownMenu_CreateInfo()
-		info.text = "<"..guildName..">"
-		info.func = onClickGuild
-		info.arg1 = guildKey
-		info.colorCode = "|cff56a3ff"
-		info.notCheckable = true
-		self:AddButton(info, level)
-	end
-	local sortedRealms = {}
 	if level == 1 then
+		local sortedRealms = {}
 		for realm in pairs(DataStore:GetRealms()) do
-			if realm ~= GetRealmName() then
+			if not (realm == GetRealmName() or Vortex:IsConnectedRealm(realm)) then
 				tinsert(sortedRealms, realm)
 			end
 		end
@@ -178,5 +160,5 @@ end
 function Vortex:LoadSettings()
 	frame:SetDatabase(self.db)
 	frame:SetupControls()
-	self:SetSearchScope(self.db.defaultSearch)
+	-- self:SetSearchScope(self.db.defaultSearch)
 end

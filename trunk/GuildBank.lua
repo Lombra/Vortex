@@ -2,6 +2,8 @@ local addonName, Vortex = ...
 
 local LIB = LibStub("LibItemButton")
 
+local myRealm = GetRealmName()
+
 local ItemInfo = Vortex.ItemInfo
 
 local guildTab = Vortex.frame:CreateTab()
@@ -10,6 +12,7 @@ guildTab.frame = CreateFrame("Frame", nil, Vortex.frame)
 guildTab.frame:SetAllPoints()
 guildTab.frame:Hide()
 guildTab.frame.width = 750
+guildTab.frame.extraWidth = 43
 Vortex.frame.guild = guildTab.frame
 
 local frame = guildTab.frame
@@ -18,14 +21,9 @@ local selectedGuild
 local selectedTab
 
 frame:SetScript("OnShow", function(self)
-	local myGuild = GetGuildInfo("player")
-	if myGuild and DataStore:GetGuildBankMoney(DataStore:GetGuild()) then
-		if not selectedGuild then
-			Vortex:SelectGuild(DataStore:GetGuild())
-		end
-	else
-		Vortex:SelectGuild()
-	end
+	local myGuild = GetGuildInfo("player") and DataStore:GetGuild()
+	Vortex:SelectGuild(DataStore:GetGuildBankMoney(myGuild) and myGuild)
+	self:SetScript("OnShow", nil)
 end)
 frame:SetScript("OnEvent", function(self, event, ...)
 	self[event](self, ...)
@@ -57,7 +55,6 @@ for i = 1, 7 do
 			button:SetPoint("TOP", buttons[c * 14 + i - 1], "BOTTOM", 0, -7)
 		end
 		tinsert(buttons, button)
-		-- buttons[i] = button
 	end
 end
 
@@ -217,43 +214,34 @@ local function onClick(self, guildKey)
 	CloseDropDownMenus()
 end
 
-local sortedGuilds = {}
-
 local guildMenu = Vortex:CreateDropdown("Frame", frame)
-guildMenu:SetWidth(128)
+guildMenu:SetWidth(160)
 guildMenu:SetPoint("TOPLEFT", -2, -27)
 guildMenu:JustifyText("LEFT")
 guildMenu.initialize = function(self, level)
-	wipe(sortedGuilds)
-	local guilds = DataStore:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)
-	for guildName, guildKey in pairs(guilds) do
-		if guildKey ~= DataStore:GetGuild() then
-			tinsert(sortedGuilds, guildName)
-		end
-	end
-	sort(sortedGuilds)
-	if level == 1 then
-		tinsert(sortedGuilds, 1, (GetGuildInfo("player")))
-	end
-	for i, guildName in ipairs(sortedGuilds) do
-		local guildKey = guilds[guildName]
+	for i, guildKey in ipairs(Vortex:GetGuilds(UIDROPDOWNMENU_MENU_VALUE)) do
+		local accountKey, realm, guildName = strsplit(".", guildKey)
 		local info = UIDropDownMenu_CreateInfo()
-		info.text = guildName
+		if Vortex:IsConnectedRealm(realm) then
+			info.text = guildName.." - "..realm
+		else
+			info.text = guildName
+		end
 		info.func = onClick
 		info.arg1 = guildKey
-		info.checked = guildKey == selectedGuild
+		info.checked = (guildKey == selectedGuild)
 		info.disabled = not DataStore:GetGuildBankFaction(guildKey)
 		UIDropDownMenu_AddButton(info, level)
 	end
 	if level == 1 then
-		wipe(sortedGuilds)
+		local sortedRealms = {}
 		for realm in pairs(DataStore:GetRealms()) do
-			if realm ~= GetRealmName() and next(DataStore:GetGuilds(realm)) then
-				tinsert(sortedGuilds, realm)
+			if not (realm == myRealm or Vortex:IsConnectedRealm(realm)) and #Vortex:GetGuilds(realm) > 0 then
+				tinsert(sortedRealms, realm)
 			end
 		end
-		sort(sortedGuilds)
-		for i, realm in ipairs(sortedGuilds) do
+		sort(sortedRealms)
+		for i, realm in ipairs(sortedRealms) do
 			local info = UIDropDownMenu_CreateInfo()
 			info.text = realm
 			info.notCheckable = true
@@ -305,6 +293,12 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 		filterItems(self:GetText())
 	end
 end)
+searchBox:HookScript("OnEditFocusLost", function(self)
+	if self:GetText() ~= "" and self:GetText() ~= SEARCH then
+		self:SetTextColor(1, 1, 1)
+		self.searchIcon:SetVertexColor(1, 1, 1)
+	end
+end)
 
 function Vortex:SelectGuild(guild)
 	if selectedTab then
@@ -313,7 +307,10 @@ function Vortex:SelectGuild(guild)
 	selectedGuild = guild
 	selectedTab = 1
 	self:UpdateGuildBank()
-	local accountKey, realmKey, guildKey = strsplit(".", guild or "")
+	local account, realm, guildKey = strsplit(".", guild or "")
+	if guildKey and realm ~= myRealm then
+		guildKey = guildKey.." - "..realm
+	end
 	guildMenu:SetText(guildKey or "Select guild")
 end
 

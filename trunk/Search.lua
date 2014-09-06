@@ -95,43 +95,15 @@ end
 
 SLASH_VORTEX_SEARCH1 = "/vxs"
 
-local searchMenuOptions = {
-	-- "UI",
-	"char",
-	"realm",
-	"all",
-}
-
-local searchMenuText = {
-	char = format("Current character (%s)", UnitName("player")),
-	realm = format("Current realm (%s)", myRealm),
-	all = "All realms",
-}
-
-local searchMenuText2 = {
-	char = "Character",
-	realm = "Realm",
-	all = "All realms",
-}
-
-local function onClick(self, arg1)
-	Vortex:SetSearchScope(arg1)
-end
-
-local searchScopeMenu = Vortex:CreateDropdown("Frame", Vortex.frame.character)
-searchScopeMenu:SetWidth(128)
-searchScopeMenu:SetPoint("RIGHT", searchBox, "LEFT", 0, -2)
-searchScopeMenu:SetText("|cffffd200Search:|r "..searchFilter)
-searchScopeMenu.initialize = function(self, level)
-	for i, option in ipairs(searchMenuOptions) do
-		local info = UIDropDownMenu_CreateInfo()
-		info.text = searchMenuText[option]
-		info.func = onClick
-		info.arg1 = option
-		info.checked = (option == searchFilter)
-		self:AddButton(info, level)
-	end
-end
+local searchAllRealmsCheckButton = CreateFrame("CheckButton", nil, Vortex.frame.character, "OptionsBaseCheckButtonTemplate")
+searchAllRealmsCheckButton:SetSize(24, 24)
+searchAllRealmsCheckButton:SetPoint("RIGHT", searchBox, "LEFT", -8, -1)
+searchAllRealmsCheckButton:SetScript("OnClick", function(self)
+	Vortex:SetSearchScope(self:GetChecked() and "all" or "realm")
+end)
+local text = searchAllRealmsCheckButton:CreateFontString(nil, nil, "GameFontHighlightSmall")
+text:SetPoint("RIGHT", searchAllRealmsCheckButton, "LEFT", 0, 1)
+text:SetText("Search all realms")
 
 local filterBar = CreateFrame("Frame", nil, Vortex.frame.list)
 filterBar:SetPoint("TOP", 0, -4)
@@ -277,7 +249,6 @@ end
 function Vortex:SetSearchScope(scope)
 	searchFilter = scope
 	self:ClearSearchResultsCache()
-	searchScopeMenu:SetText("|cffffd200Search:|r "..searchMenuText2[scope])
 	local module = self:GetSelectedModule()
 	local character = self:GetSelectedCharacter()
 	if scope ~= "UI" then
@@ -340,11 +311,11 @@ local function mergeCharacterItems(list, character)
 end
 
 local function mergeItems(list, realm)
-	for k, character in pairs(DataStore:GetCharacters(realm)) do
+	for k, character in pairs(Vortex:GetCharacters(realm)) do
 		mergeCharacterItems(list, character)
 	end
 	if Vortex.db.searchGuild then
-		for k, guild in pairs(DataStore:GetGuilds(realm)) do
+		for k, guild in ipairs(Vortex:GetGuilds(realm)) do
 			for i = 1, 8 do
 				local tab = DataStore:GetGuildBankTab(guild, i)
 				for j = 1, 98 do
@@ -382,7 +353,9 @@ function Vortex:GetCache()
 			mergeItems(resultsCache)
 		elseif searchFilter == "all" then
 			for realm in pairs(DataStore:GetRealms()) do
-				mergeItems(resultsCache, realm)
+				if not Vortex:IsConnectedRealm(realm) then
+					mergeItems(resultsCache, realm)
+				end
 			end
 		end
 	end
@@ -409,6 +382,12 @@ local function sortItemResults(a, b)
 			return true
 		end
 		if realmKeyB == myRealm then
+			return false
+		end
+		if Vortex:IsConnectedRealm(realmKeyA) then
+			return true
+		end
+		if Vortex:IsConnectedRealm(realmKeyB) then
 			return false
 		end
 		return realmKeyA < realmKeyB
