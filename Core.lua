@@ -7,6 +7,10 @@ Libra:EmbedWidgets(Vortex)
 local myCharacter = DataStore:GetCharacter()
 local myRealm = GetRealmName()
 
+local connectedRealms = {}
+local sortedCharacters = {}
+local sortedGuilds = {}
+
 BINDING_HEADER_VORTEX = "Vortex"
 BINDING_NAME_VORTEX_TOGGLE = "Toggle Vortex"
 
@@ -40,7 +44,7 @@ local dataobj = LibStub("LibDataBroker-1.1"):NewDataObject("Vortex", {
 	end,
 })
 
-Vortex.modulesSorted = {}
+Vortex.sortedModules = {}
 
 local LIST_PANEL_WIDTH = 128 - PANEL_INSET_RIGHT_OFFSET
 
@@ -64,7 +68,7 @@ local defaults = {
 	tooltipModifier = false,
 	useListView = false,
 	searchGuild = true,
-	defaultModule = "All",
+	defaultModule = "Character",
 	defaultSearch = "realm",
 }
 
@@ -77,8 +81,28 @@ function Vortex:OnInitialize()
 	self:LoadSettings()
 	local character = DataStore:GetCharacter()
 	self.selectedCharacter = character
-	local accountKey, realmKey, charKey = strsplit(".", character)
+	local account, realm, charKey = strsplit(".", character)
 	self.characterMenu:SetText(charKey)
+	self:RegisterEvent("PLAYER_LOGIN")
+	self:RegisterEvent("PLAYER_GUILD_UPDATE")
+end
+
+function Vortex:PLAYER_LOGIN()
+	local _, realm = UnitFullName("player")
+	for i, v in ipairs(GetAutoCompleteRealms() or {}) do
+		if v ~= realm then
+			connectedRealms[v] = true
+		end
+	end
+end
+
+function Vortex:PLAYER_GUILD_UPDATE()
+	-- guild array for this realm will need to be rebuilt
+	sortedGuilds[myRealm] = nil
+end
+
+function Vortex:IsConnectedRealm(realm)
+	return connectedRealms[realm:gsub("[ -]", "")]
 end
 
 local function addUI(self)
@@ -101,7 +125,7 @@ local moduleMethods = {
 	end,
 	ClearCache = function(self, character)
 		self.cache[character] = nil
-		Vortex:GetModule("All").cache[character] = nil
+		-- Vortex:GetModule("All").cache[character] = nil
 		Vortex:ClearSearchResultsCache(character)
 	end,
 	IncludeContainer = function(self, containerID)
@@ -146,7 +170,7 @@ local moduleMethods = {
 }
 
 function Vortex:OnModuleCreated(name, table)
-	local module = self:CreateUI(name, table.label)
+	self:CreateUI(name, table.label)
 	if table.altUI then
 		addUI(table)
 	end
@@ -159,12 +183,13 @@ function Vortex:OnModuleCreated(name, table)
 	for k, v in pairs(moduleMethods) do table[k] = v end
 	table.cache = {}
 	table.containers = {}
-	tinsert(self.modulesSorted, name)
+	tinsert(self.sortedModules, name)
 end
 
 function Vortex:SelectModule(moduleName)
 	local selectedModule = self:GetSelectedModule()
-	local module = self:GetModule(moduleName)
+	-- fall back to first module if the given one doesn't exist
+	local module = self:GetModule(moduleName) or self:GetModule(self.sortedModules[1])
 	if selectedModule then
 		selectedModule.button:UnlockHighlight()
 		selectedModule.button.highlight:SetDesaturated(false)
@@ -202,10 +227,19 @@ function Vortex:UpdateModule(module, character)
 	end
 end
 
+function Vortex:GetModuleTitle(moduleName)
+	local module = Vortex:GetModule(moduleName)
+	return module and module.label or moduleName
+end
+
 function Vortex:SelectCharacter(character)
 	self.selectedCharacter = character
 	local accountKey, realmKey, charKey = strsplit(".", character)
-	self.characterMenu:SetText(charKey)
+	if realmKey == myRealm then
+		self.characterMenu:SetText(charKey)
+	else
+		self.characterMenu:SetText(charKey.." - "..realmKey)
+	end
 	self:CloseAllContainers()
 	self:StopSearch()
 	-- self:UpdateModule(self:GetSelectedModule(), character)
@@ -216,7 +250,22 @@ function Vortex:GetSelectedCharacter()
 	return self.selectedCharacter
 end
 
-local sortedCharacters = {}
+local function sortCharacters(a, b)
+	local accountKeyA, realmKeyA, charKeyA = strsplit(".", a)
+	local accountKeyB, realmKeyB, charKeyB = strsplit(".", b)
+	if realmKeyA ~= realmKeyB then
+		-- your own realm gets sorted before others
+		if realmKeyA == myRealm then
+			return true
+		end
+		if realmKeyB == myRealm then
+			return false
+		end
+		return realmKeyA < realmKeyB
+	else
+		return charKeyA < charKeyB
+	end
+end
 
 function Vortex:GetCharacters(realm)
 	realm = realm or myRealm
@@ -225,13 +274,16 @@ function Vortex:GetCharacters(realm)
 	end
 	local chars = {}
 	sortedCharacters[realm] = chars
-	local characters = DataStore:GetCharacters(realm)
-	for characterName, characterKey in pairs(characters) do
-		if characterKey ~= myCharacter then
-			tinsert(chars, characterKey)
+	for k in pairs(DataStore:GetRealms()) do
+		if k == realm or (realm == myRealm and self:IsConnectedRealm(k)) then
+			for characterName, characterKey in pairs(DataStore:GetCharacters(k)) do
+				if characterKey ~= myCharacter then
+					tinsert(chars, characterKey)
+				end
+			end
 		end
 	end
-	sort(chars)
+	sort(chars, sortCharacters)
 	if realm == myRealm then
 		tinsert(chars, 1, myCharacter)
 	end
@@ -244,10 +296,51 @@ function Vortex:DeleteCharacter(character)
 	if character == self:GetSelectedCharacter() then
 		self:SelectCharacter(DataStore:GetCharacter())
 	end
-	self:GetModule("All").cache[character] = nil
+	-- self:GetModule("All").cache[character] = nil
 	self:ClearSearchResultsCache(character)
 	-- character array for this realm will need to be rebuilt
 	sortedCharacters[realmKey] = nil
+end
+
+local function sortGuilds(a, b)
+	local accountKeyA, realmKeyA, charKeyA = strsplit(".", a)
+	local accountKeyB, realmKeyB, charKeyB = strsplit(".", b)
+	if realmKeyA ~= realmKeyB then
+		-- your own realm gets sorted before others
+		if realmKeyA == myRealm then
+			return true
+		end
+		if realmKeyB == myRealm then
+			return false
+		end
+		return realmKeyA < realmKeyB
+	else
+		return charKeyA < charKeyB
+	end
+end
+
+function Vortex:GetGuilds(realm)
+	realm = realm or myRealm
+	if sortedGuilds[realm] then
+		return sortedGuilds[realm]
+	end
+	local guilds = {}
+	sortedGuilds[realm] = guilds
+	local myGuild = DataStore:GetGuild()
+	for k in pairs(DataStore:GetRealms()) do
+		if k == realm or (realm == myRealm and self:IsConnectedRealm(k)) then
+			for guildName, guildKey in pairs(DataStore:GetGuilds(k)) do
+				if guildKey ~= myGuild then
+					tinsert(guilds, guildKey)
+				end
+			end
+		end
+	end
+	sort(guilds, sortGuilds)
+	if realm == myRealm and GetGuildInfo("player") then
+		tinsert(guilds, 1, myGuild)
+	end
+	return guilds
 end
 
 function Vortex:DeleteGuild(guild)
@@ -257,6 +350,8 @@ function Vortex:DeleteGuild(guild)
 		self:SelectGuild(DataStore:GetGuild())
 	end
 	self:ClearSearchResultsCache()
+	-- character array for this realm will need to be rebuilt
+	sortedGuilds[realmKey] = nil
 end
 
 function Vortex:AddSlashCommand(command, handler)

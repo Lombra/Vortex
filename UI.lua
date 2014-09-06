@@ -62,6 +62,7 @@ local noType = {
 
 local yesType = {
 	[LBI["Consumable"]] = true,
+	[LBI["Gem"]] = true,
 	[LBI["Trade Goods"]] = true,
 }
 
@@ -79,7 +80,7 @@ frame:SetTitleText("Vortex")
 frame:SetScript("OnShow", function(self)
 	PlaySound("igCharacterInfoOpen")
 	if not self:GetSelectedTab() then
-		Vortex:SelectModule(Vortex.db.defaultModule or "All")
+		Vortex:SelectModule(Vortex.db.defaultModule)
 		self:SelectTab(1)
 	end
 end)
@@ -106,6 +107,7 @@ function frame:OnTabSelected(id)
 	frame:Show()
 	local module = Vortex:GetSelectedModule()
 	Vortex.frame:SetWidth(frame.width or (not Vortex.db.useListView and module.altUI and module.width or PANEL_DEFAULT_WIDTH) + LIST_PANEL_WIDTH)
+	Vortex.frame:SetAttribute("UIPanelLayout-extraWidth", frame.extraWidth)
 	UpdateUIPanelPositions(Vortex.frame)
 end
 
@@ -250,12 +252,13 @@ end
 local TOOLTIP_LINE_CHARACTER = "|cffffffff%d|r %s %s"
 local TOOLTIP_LINE_CHARACTER_REALM = "|cffffffff%d|r %s - %s %s"
 local TOOLTIP_LINE_GUILD = "|cffffffff%d|r |cff56a3ff<%s>"
+local TOOLTIP_LINE_GUILD_REALM = "|cffffffff%d|r |cff56a3ff<%s> - %s"
 
 local function getItem(tooltip, item, realm)
 	local realmTotal = 0
 	local realmNumChars = 0
 	for i, character in ipairs(Vortex:GetCharacters(realm)) do
-		local _, _, charKey = strsplit(".", character)
+		local _, realm, charKey = strsplit(".", character)
 		local where = "("
 		local count = 0
 		for k, module in Vortex:IterateModules() do
@@ -269,7 +272,7 @@ local function getItem(tooltip, item, realm)
 		end
 		if count > 0 then
 			where = gsub(where, ", $", ")")
-			if realm then
+			if realm ~= myRealm then
 				tooltip:AddLine(format(TOOLTIP_LINE_CHARACTER_REALM, count, charKey, realm, where))
 			else
 				tooltip:AddLine(format(TOOLTIP_LINE_CHARACTER, count, charKey, where))
@@ -304,7 +307,7 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 	local total, numChars = getItem(self, itemID)
 	if Vortex.db.tooltipBNet and isBNetBoundItem(itemID) then
 		for realm in pairs(DataStore:GetRealms()) do
-			if realm ~= myRealm then
+			if not (realm == myRealm or Vortex:IsConnectedRealm(realm)) then
 				local realmTotal, realmNumChars = getItem(self, itemID, realm)
 				total = total + realmTotal
 				numChars = numChars + realmNumChars
@@ -312,10 +315,15 @@ GameTooltip:HookScript("OnTooltipSetItem", function(self)
 		end
 	end
 	if Vortex.db.tooltipGuild then
-		for guild, guildKey in pairs(DataStore:GetGuilds()) do
+		for i, guildKey in ipairs(Vortex:GetGuilds()) do
+			local account, realm, guildName = strsplit(".", guildKey)
 			local count = DataStore:GetGuildBankItemCount(guildKey, itemID)
 			if count > 0 then
-				self:AddLine(format(TOOLTIP_LINE_GUILD, count, guild))
+				if realm ~= myRealm then
+					self:AddLine(format(TOOLTIP_LINE_GUILD_REALM, count, guildName, realm))
+				else
+					self:AddLine(format(TOOLTIP_LINE_GUILD, count, guildName))
+				end
 				numChars = numChars + 1
 			end
 			total = total + count
@@ -341,37 +349,37 @@ function GameTooltip_OnTooltipAddMoney(self, cost, maxcost)
 end
 
 do
-	local All = Vortex:NewModule("All", {
-		label = "All items",
-		search = false,
-		items = false,
-	})
+	-- local All = Vortex:NewModule("All", {
+		-- label = "All items",
+		-- search = false,
+		-- items = false,
+	-- })
 	
-	function All:BuildList(character)
-		local added = {}
-		local list = {}
-		for k, module in Vortex:IterateModules() do
-			if module.items then
-				for i, v in ipairs(module:GetList(character)) do
-					local item = v.link or v.id
-					if not added[item] then
-						tinsert(list, {
-							id = v.id,
-							link = v.link,
-							count = v.count,
-						})
-						if item then
-							added[item] = #list
-						end
-					else
-						local item = list[added[item]]
-						item.count = (item.count or v.count) and (item.count or 0) + (v.count or 0)
-					end
-				end
-			end
-		end
-		return list
-	end
+	-- function All:BuildList(character)
+		-- local added = {}
+		-- local list = {}
+		-- for k, module in Vortex:IterateModules() do
+			-- if module.items then
+				-- for i, v in ipairs(module:GetList(character)) do
+					-- local item = v.link or v.id
+					-- if not added[item] then
+						-- tinsert(list, {
+							-- id = v.id,
+							-- link = v.link,
+							-- count = v.count,
+						-- })
+						-- if item then
+							-- added[item] = #list
+						-- end
+					-- else
+						-- local item = list[added[item]]
+						-- item.count = (item.count or v.count) and (item.count or 0) + (v.count or 0)
+					-- end
+				-- end
+			-- end
+		-- end
+		-- return list
+	-- end
 end
 
 local bagFrames = {}
@@ -709,23 +717,27 @@ local function onClick(self, characterKey)
 end
 
 local button = Vortex:CreateDropdown("Frame", characterTab.frame)
-button:SetWidth(96)
+button:SetWidth(128)
 button:JustifyText("LEFT")
 button:SetPoint("TOPLEFT", frame, 0, -29)
 button.initialize = function(self, level)
 	for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 		local accountKey, realmKey, characterName = strsplit(".", characterKey)
 		local info = UIDropDownMenu_CreateInfo()
-		info.text = characterName
+		if Vortex:IsConnectedRealm(realmKey) then
+			info.text = characterName.." - "..realmKey
+		else
+			info.text = characterName
+		end
 		info.func = onClick
 		info.arg1 = characterKey
 		info.checked = (characterKey == Vortex:GetSelectedCharacter())
 		UIDropDownMenu_AddButton(info, level)
 	end
-	local sortedRealms = {}
 	if level == 1 then
+		local sortedRealms = {}
 		for realm in pairs(DataStore:GetRealms()) do
-			if realm ~= myRealm then
+			if not (realm == myRealm or Vortex:IsConnectedRealm(realm)) then
 				tinsert(sortedRealms, realm)
 			end
 		end

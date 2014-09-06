@@ -60,7 +60,7 @@ hooksecurefunc("SendMail", function(recipient)
 		end
 	end
 	
-	for characterName, characterKey in pairs(DataStore:GetCharacters()) do
+	for characterName, characterKey in pairs(DataStore:GetCharacters(realm)) do
 		if strlower(characterName) == strlower(recipient) then
 			Mail:ClearCache(characterKey)
 			break
@@ -81,7 +81,7 @@ hooksecurefunc("ReturnInboxItem", function(index)
 		end
 	end
 	
-	for characterName, characterKey in pairs(DataStore:GetCharacters()) do
+	for characterName, characterKey in pairs(DataStore:GetCharacters(realm)) do
 		if strlower(characterName) == strlower(mailSender) then
 			Mail:ClearCache(characterKey)
 			break
