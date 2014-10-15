@@ -95,7 +95,7 @@ StaticPopupDialogs["VORTEX_DELETE_GUILD"] = {
 local button = Vortex:CreateButton(frame)
 button:SetWidth(96)
 button:SetPoint("TOP", frame.controls[#frame.controls], "BOTTOM", 0, -16)
-button.rightArrow:Show()
+button.arrow:Show()
 button:SetText("Purge data")
 button:SetScript("OnClick", function(self)
 	self.menu:Toggle()
@@ -104,8 +104,6 @@ end)
 button.menu = Vortex:CreateDropdown("Menu")
 button.menu.relativeTo = button
 button.menu.relativePoint = "TOPRIGHT"
-button.menu.xOffset = 0
-button.menu.yOffset = 0
 button.menu.initialize = function(self, level)
 	for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 		if characterKey ~= DataStore:GetCharacter() then

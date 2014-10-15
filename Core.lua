@@ -350,7 +350,7 @@ function Vortex:DeleteGuild(guild)
 		self:SelectGuild(DataStore:GetGuild())
 	end
 	self:ClearSearchResultsCache()
-	-- character array for this realm will need to be rebuilt
+	-- guild array for this realm will need to be rebuilt
 	sortedGuilds[realmKey] = nil
 end
 
