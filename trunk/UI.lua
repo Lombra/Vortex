@@ -261,12 +261,12 @@ local function getItem(tooltip, item, realm)
 		local _, realm, charKey = strsplit(".", character)
 		local where = "("
 		local count = 0
-		for k, module in Vortex:IterateModules() do
+		for i, module in Vortex:IterateModules() do
 			if module.items then
 				local moduleCount = module:GetItemCount(character, item) or 0
 				if moduleCount > 0 then
 					count = count + moduleCount
-					where = format("%s%d %s, ", where, moduleCount, k)
+					where = format("%s%d %s, ", where, moduleCount, module.name)
 				end
 			end
 		end
@@ -391,11 +391,11 @@ local itemButtonMethods = {
 		self.icon:SetTexture(GetItemIcon(itemID) or self.bg)
 		-- self.icon:SetShown(itemID ~= nil)
 		if count and count > 1 then
-			self.count:SetText(count)
-			self.count:Show()
+			self.Count:SetText(count)
+			self.Count:Show()
 			self.stackSize = count
 		else
-			self.count:Hide()
+			self.Count:Hide()
 			self.stackSize = nil
 		end
 		LIB:UpdateButton(self, itemID)
@@ -406,17 +406,21 @@ local itemButtonMethods = {
 			self:SetChecked(false)
 		end
 		if self.isBag then
-			if not self.item and self:GetID() ~= 0 then return end
-			local bag = bagFrames[self:GetID()]
-			local isOpen = Vortex:IsBagOpen(self:GetID())
+			local bagID = self:GetID()
+			if not self.item and bagID ~= 0 then return end
+			local bag = bagFrames[bagID]
+			local isOpen = Vortex:IsBagOpen(bagID)
 			if isOpen then
 				bag:Hide()
 			else
-				ContainerFrame_GenerateFrame(bag, self.size, self:GetID())
-				local icon, link, size = DataStore:GetContainerInfo(Vortex:GetSelectedCharacter(), self:GetID())
+				-- use the ID of a regular bag for the backpack so it doesn't have the extra stuff
+				ContainerFrame_GenerateFrame(bag, self.size, bagID == 0 and 1 or bagID)
+				bag:SetID(bagID)
+				bag.PortraitButton:SetID(bagID)
+				local icon, link, size = DataStore:GetContainerInfo(Vortex:GetSelectedCharacter(), bagID)
 				_G[bag:GetName().."Name"]:SetText(link and GetItemInfo(link) or BACKPACK_TOOLTIP)
-				SetPortraitToTexture(_G[bag:GetName().."Portrait"], icon)
-				Vortex:UpdateContainer(self:GetID(), Vortex:GetSelectedCharacter())
+				SetPortraitToTexture(bag.Portrait, icon)
+				Vortex:UpdateContainer(bagID, Vortex:GetSelectedCharacter())
 			end
 			self:SetChecked(not isOpen)
 		elseif self.item then
@@ -431,7 +435,6 @@ local itemButtonMethods = {
 			else
 				ShoppingTooltip1:Hide()
 				ShoppingTooltip2:Hide()
-				ShoppingTooltip3:Hide()
 			end
 
 			if IsModifiedClick("DRESSUP") then
@@ -456,7 +459,6 @@ local itemButtonMethods = {
 					GameTooltip:SetHyperlink(self.item)
 				end
 			end
-			self.showingTooltip = true
 			if IsModifiedClick("DRESSUP") then
 				ShowInspectCursor()
 			end
@@ -469,7 +471,6 @@ local itemButtonMethods = {
 	OnLeave = function(self)
 		GameTooltip:Hide()
 		GameTooltip.stackSize = nil
-		self.showingTooltip = false
 		ResetCursor()
 		self:SetScript("OnUpdate", nil)
 	end,
@@ -484,12 +485,12 @@ function Vortex:SetupItemButton(button)
 	button:SetScript("OnLeave", button.OnLeave)
 	button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 	button.UpdateTooltip = button.OnEnter
+	LIB:RegisterButton(button)
 end
 
 function Vortex:CreateItemButton(parent)
 	local button = CreateFrame("Button", nil, parent, "ItemButtonTemplate")
 	self:SetupItemButton(button)
-	LIB:RegisterButton(button)
 	return button
 end
 
@@ -544,7 +545,7 @@ local function onShow(self)
 	ContainerFrame1.bags[ContainerFrame1.bagsShown + 1] = self:GetName()
 	ContainerFrame1.bagsShown = ContainerFrame1.bagsShown + 1
 	PlaySound("igBackPackOpen")
-	Vortex:SearchContainer(self:GetID())
+	-- Vortex:SearchContainer(self:GetID())
 end
 
 local function onHide(self)
@@ -562,8 +563,10 @@ for i = 0, 11 do
 	local bag = CreateFrame("Frame", frameName, UIParent, "ContainerFrameTemplate")
 	bag:SetScript("OnShow", onShow)
 	bag:SetScript("OnHide", onHide)
+	bag.PortraitButton:SetScript("OnEnter", onEnter)
+	bag.PortraitButton:SetScript("OnLeave", GameTooltip_Hide)
+	bag.PortraitButton:SetScript("OnClick", nil)
 	_G[frameName.."CloseButton"]:SetScript("OnClick", HideParentPanel)
-	_G[frameName.."PortraitButton"]:SetScript("OnEnter", onEnter)
 	bagFrames[i] = bag
 	bag.buttons = {}
 	for slot = 1, 36 do
@@ -576,7 +579,9 @@ for i = 0, 11 do
 		button.SplitStack = nil
 		button.UpdateTooltip = button.OnEnter
 		button.anchor = "ANCHOR_LEFT"
-		_G[frameName.."Item"..slot.."NewItemTexture"]:Hide()
+		-- button.flash:Hide()
+		-- button.NewItemTexture:Hide()
+		button.BattlepayItemTexture:Hide()
 		bag.buttons[slot] = button
 	end
 	Vortex:RegisterContainerButtons(i, bag.buttons)
@@ -652,12 +657,13 @@ do
 					button:SetHeight(max(BUTTON_HEIGHT, 15 + button.source:GetHeight() + 1))
 				else
 					button.label:SetText(RETRIEVING_ITEM_INFO)
+					button.label:SetTextColor(RED_FONT_COLOR.r, RED_FONT_COLOR.g, RED_FONT_COLOR.b)
 					doUpdateList = true
 				end
 			end
 			button.item = id or object.link or object.id
 			
-			if button.showingTooltip then
+			if GetMouseFocus() == button then
 				button:OnEnter()
 			end
 			

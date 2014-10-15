@@ -98,16 +98,15 @@ local texCoords = {
 local corners = {}
 
 for i, v in ipairs(v) do
-	for i, h in ipairs(h) do
-		local corner = v..h
-		local texture = BankUI:CreateTexture(nil, "BORDER")
-		texture:SetSize(cornerSize, cornerSize)
-		texture:SetPoint(corner, edgeOffsets[h], edgeOffsets[v])
-		texture:SetTexture([[Interface\BankFrame\CornersShadow]])
-		-- local texCoords = texCoords[corner]
-		texture:SetTexCoord(0.01562500, 0.70312500, texCoords[corner].t, texCoords[corner].b)
-		corners[corner] = texture
-	end
+for i, h in ipairs(h) do
+	local corner = v..h
+	local texture = BankUI:CreateTexture(nil, "BORDER")
+	texture:SetSize(cornerSize, cornerSize)
+	texture:SetPoint(corner, edgeOffsets[h], edgeOffsets[v])
+	texture:SetTexture([[Interface\BankFrame\CornersShadow]])
+	texture:SetTexCoord(0.01562500, 0.70312500, texCoords[corner].t, texCoords[corner].b)
+	corners[corner] = texture
+end
 end
 
 local texCoords = {
@@ -118,25 +117,23 @@ local texCoords = {
 }
 
 for i, h in ipairs(h) do
+	local c1 = v[1]..h
+	local c2 = v[2]..h
 	local texture = BankUI:CreateTexture(nil, "BORDER")
 	texture:SetSize(17, 256)
 	texture:SetTexture([[Interface\BankFrame\VertShadow]])
-	-- local texCoords = texCoords[corner]
 	texture:SetTexCoord(texCoords[h].l, texCoords[h].r, 0, 1)
-	local c1 = v[1]..h
-	local c2 = v[2]..h
 	texture:SetPoint(c1, corners[c1], c2)
 	texture:SetPoint(c2, corners[c2], c1)
 end
 
 for i, v in ipairs(v) do
+	local c1 = v..h[1]
+	local c2 = v..h[2]
 	local texture = BankUI:CreateTexture(nil, "BORDER")
 	texture:SetSize(256, 17)
 	texture:SetTexture([[Interface\BankFrame\HorizShadow]])
-	-- local texCoords = texCoords[corner]
 	texture:SetTexCoord(0, 1, texCoords[v].t, texCoords[v].b)
-	local c1 = v..h[1]
-	local c2 = v..h[2]
 	texture:SetPoint(c1, corners[c1], c2)
 	texture:SetPoint(c2, corners[c2], c1)
 end
