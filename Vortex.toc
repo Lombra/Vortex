@@ -16,6 +16,7 @@ Options.lua
 Character.lua
 Bags.lua
 Bank.lua
+ReagentBank.lua
 Void.lua
 Mail.lua
 Auctions.lua

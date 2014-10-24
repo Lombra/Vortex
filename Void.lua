@@ -5,22 +5,6 @@ local Void = Vortex:NewModule("Void storage", {
 	width = 491,
 })
 
-Void:IncludeContainer("VoidStorage")
-
-function Void:OnInitialize()
-	DataStore_Inventory.RegisterMessage(self, "DATASTORE_CONTAINER_UPDATED")
-end
-
-function Void:DATASTORE_CONTAINER_UPDATED(event, bagID)
-	if self:HasContainer(bagID) then
-		self:Refresh()
-	end
-end
-
-function Void:GetItemCount(character, itemID)
-	return select(3, DataStore:GetContainerItemCount(character, itemID))
-end
-
 local bg = Void.ui:CreateTexture(nil, "BACKGROUND", nil, -4)
 bg:SetPoint("TOPLEFT", 3, -3)
 bg:SetPoint("BOTTOMRIGHT", -3, 2)
@@ -61,4 +45,57 @@ for i = 1, 4 do
 	texture:SetTexture(0.1451, 0.0941, 0.1373, 0.8)
 end
 
-Vortex:RegisterContainerButtons("VoidStorage", buttons)
+local selectedTab = 1
+
+local tabs = {}
+
+local function onClick(self)
+	tabs[selectedTab]:SetChecked(false)
+	tabs[self:GetID()]:SetChecked(true)
+	selectedTab = self:GetID()
+	Void:Update(Vortex:GetSelectedCharacter())
+end
+
+for i = 1, 2 do
+	local tab = CreateFrame("CheckButton", nil, Void.ui)
+	tab:SetSize(32, 32)
+	if i == 1 then
+		tab:SetPoint("LEFT", Vortex.frame, "TOPRIGHT", 1, -60)
+	else
+		tab:SetPoint("TOP", tabs[i - 1], "BOTTOM", 0, -16)
+	end
+	tab:SetHighlightTexture([[Interface\Buttons\ButtonHilight-Square]])
+	tab:SetCheckedTexture([[Interface\Buttons\CheckButtonHilight]])
+	tab:SetScript("OnClick", onClick)
+	tab:SetID(i)
+	
+	local bg = tab:CreateTexture(nil, "BACKGROUND")
+	bg:SetSize(64, 64)
+	bg:SetPoint("TOPLEFT", -3, 11)
+	bg:SetTexture([[Interface\SpellBook\SpellBook-SkillLineTab]])
+	
+	tabs[i] = tab
+end
+
+tabs[1]:SetNormalTexture([[Interface\Icons\INV_Enchant_EssenceCosmicGreater]])
+tabs[2]:SetNormalTexture([[Interface\Icons\INV_Enchant_EssenceArcaneLarge]])
+
+tabs[1]:SetChecked(true)
+
+function Void:OnInitialize()
+	DataStore_Inventory.RegisterMessage(self, "DATASTORE_VOIDSTORAGE_UPDATED", "Refresh")
+end
+
+function Void:GetItemCount(character, itemID)
+	return select(3, DataStore:GetContainerItemCount(character, itemID))
+end
+
+function Void:UpdateUI(character)
+	Vortex:UpdateContainer("VoidStorage.Tab"..selectedTab, character)
+end
+
+Vortex:RegisterContainerButtons("VoidStorage.Tab1", buttons)
+Vortex:RegisterContainerButtons("VoidStorage.Tab2", buttons)
+
+Void:IncludeContainer("VoidStorage.Tab1")
+Void:IncludeContainer("VoidStorage.Tab2")

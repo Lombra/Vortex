@@ -261,10 +261,10 @@ local function filterItems(text)
 			for j, button in ipairs(buttons) do
 				local itemID, itemLink = DataStore:GetSlotInfo(tab, j)
 				local item = (itemID or itemLink) and ItemInfo[itemID or itemLink]
-				local match = text == "" or text == SEARCH or (item and strfind(item.name:lower(), text:lower(), nil, true))
+				local match = text == "" or (item and strfind(item.name:lower(), text:lower(), nil, true))
 				if i == selectedTab then
 					button.searchOverlay:SetShown((itemID or itemLink) and not match)
-					if ((itemID or itemLink) and match) or (text == "" or text == SEARCH) then
+					if ((itemID or itemLink) and match) or text == "" then
 						tabOverlay:Hide()
 					end
 				elseif match then
@@ -280,24 +280,12 @@ end
 local searchBox = Vortex:CreateEditbox(frame, true)
 searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", -16, -33)
-searchBox.clearFunc = function(self)
-	filterItems("")
-end
-searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
 searchBox:SetScript("OnEscapePressed", function(self)
-	self:SetText("")
 	self:ClearFocus()
+	self:SetText("")
 end)
-searchBox:SetScript("OnTextChanged", function(self, isUserInput)
-	if isUserInput then
-		filterItems(self:GetText())
-	end
-end)
-searchBox:HookScript("OnEditFocusLost", function(self)
-	if self:GetText() ~= "" and self:GetText() ~= SEARCH then
-		self:SetTextColor(1, 1, 1)
-		self.searchIcon:SetVertexColor(1, 1, 1)
-	end
+searchBox:HookScript("OnTextChanged", function(self, isUserInput)
+	filterItems(self:GetText())
 end)
 
 function Vortex:SelectGuild(guild)

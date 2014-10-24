@@ -4,9 +4,7 @@ local LII = LibStub("LibItemInfo-1.0")
 local LIB = LibStub("LibItemButton")
 local LBI = LibStub("LibBabble-Inventory-3.0"):GetUnstrictLookupTable()
 
-local myCharacter
 local myRealm = GetRealmName()
-local myFaction = UnitFactionGroup("player")
 
 local t = {
 	["Bows"] = "Bow",
@@ -123,7 +121,7 @@ frame.character = characterTab.frame
 
 local function onClick(self)
 	if self.module ~= Vortex:GetSelectedModule().name or Vortex:IsSearching() then
-		Vortex:StopSearch()
+		Vortex:ClearSearch()
 		Vortex:SelectModule(self.module)
 	end
 end
@@ -458,6 +456,9 @@ local itemButtonMethods = {
 				else
 					GameTooltip:SetHyperlink(self.item)
 				end
+			end
+			if self.PostEnter then
+				self:PostEnter()
 			end
 			if IsModifiedClick("DRESSUP") then
 				ShowInspectCursor()
