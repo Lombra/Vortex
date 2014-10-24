@@ -15,44 +15,10 @@ local format = format
 local gsub = gsub
 local strsplit = strsplit
 
-local function onEditFocusLost(self)
-	if Vortex:GetFilter("name") then
-		self:SetTextColor(1, 1, 1)
-		self.searchIcon:SetVertexColor(1, 1, 1)
-	end
-	-- local text = self:GetText()
-	-- if not Vortex:GetFilter("name") then
-		-- if searchFilter == "UI" then
-			-- local module = Vortex:GetSelectedModule()
-			-- module:Search()
-		-- elseif Vortex.isSearching then
-			-- Vortex:SetList(nil)
-		-- end
-	-- end
-end
-
-local function onEditFocusGained(self)
-	if not Vortex:GetFilter("name") and searchFilter ~= "UI" then
-	end
-end
-
 local searchBox = Vortex:CreateEditbox(Vortex.frame.character, true)
 searchBox:SetWidth(128)
 searchBox:SetPoint("TOPRIGHT", Vortex.frame, -16, -33)
-searchBox.clearFunc = function()
-	-- Vortex:ClearFilter("name")
-	-- Vortex:SetList(nil)
-	Vortex:StopSearch()
-	Vortex:SelectModule(Vortex:GetSelectedModule().name)
-end
-searchBox:HookScript("OnEditFocusLost", onEditFocusLost)
--- searchBox:HookScript("OnEditFocusGained", onEditFocusGained)
-searchBox:SetScript("OnEnterPressed", EditBox_ClearFocus)
-searchBox:SetScript("OnTextChanged", function(self, isUserInput)
-	if not isUserInput then
-		return
-	end
-	
+searchBox:HookScript("OnTextChanged", function(self, isUserInput)
 	local text = self:GetText()
 	if text ~= "" then
 		Vortex:SetFilter("name", text:lower())
@@ -62,7 +28,7 @@ searchBox:SetScript("OnTextChanged", function(self, isUserInput)
 	else
 		Vortex:ClearFilter("name")
 		if searchFilter ~= "UI" then
-			Vortex:StopSearch(true)
+			Vortex:StopSearch()
 			Vortex:SelectModule(Vortex:GetSelectedModule().name)
 			return
 		end
@@ -130,12 +96,7 @@ filterBar.clear:SetScript("OnLeave", function(self)
 	self:SetAlpha(0.5)
 end)
 filterBar.clear:SetScript("OnClick", function(self)
-	-- searchBox:SetText(SEARCH)
-	-- searchBox:ClearFocus()
-	-- searchBox.clearButton:Hide()
-	-- Vortex:ClearFilter("name")
-	Vortex:StopSearch()
-	Vortex:SelectModule(Vortex:GetSelectedModule().name)
+	Vortex:ClearSearch()
 end)
 filterBar.clear:SetScript("OnMouseDown", function(self)
 	self.texture:SetPoint("CENTER", 1, -1)
@@ -214,8 +175,6 @@ function Vortex:Search()
 	filterBar:Show()
 	self.scroll:SetPoint("TOP", filterBar, "BOTTOM")
 	self.scroll.dynamic = dynamic
-	searchBox:SetTextColor(1, 1, 1)
-	searchBox.searchIcon:SetVertexColor(1, 1, 1)
 	self.frame.ui:Hide()
 	self.frame.list:Show()
 	self.frame:SetWidth(PANEL_DEFAULT_WIDTH + LIST_PANEL_WIDTH)
@@ -224,22 +183,20 @@ function Vortex:Search()
 	module.button.highlight:SetDesaturated(true)
 end
 
-function Vortex:StopSearch(keepFocus)
+function Vortex:StopSearch()
 	if not self:IsSearching() then return end
 	self.isSearching = false
 	filterBar:Hide()
 	self.scroll:SetPoint("TOP", self.frame.Inset, 0, -4)
 	self.scroll.dynamic = nil
-	if not keepFocus then
-		searchBox:SetText(SEARCH)
-		searchBox:ClearFocus()
-		searchBox.clearButton:Hide()
-		searchBox:SetTextColor(0.5, 0.5, 0.5)
-		searchBox.searchIcon:SetVertexColor(0.6, 0.6, 0.6)
-	end
 	self:ClearFilter("name")
 	-- local module = self:GetSelectedModule()
 	-- module:Search()
+end
+
+function Vortex:ClearSearch()
+	searchBox:ClearFocus()
+	searchBox:SetText("")
 end
 
 function Vortex:IsSearching()

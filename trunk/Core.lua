@@ -241,7 +241,7 @@ function Vortex:SelectCharacter(character)
 		self.characterMenu:SetText(charKey.." - "..realmKey)
 	end
 	self:CloseAllContainers()
-	self:StopSearch()
+	self:ClearSearch()
 	-- self:UpdateModule(self:GetSelectedModule(), character)
 	self:SelectModule(self:GetSelectedModule().name)
 end
