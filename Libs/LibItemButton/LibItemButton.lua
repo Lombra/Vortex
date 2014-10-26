@@ -164,14 +164,15 @@ do	-- bank
 				lib:UpdateButton(button, GetContainerItemLink(REAGENTBANK_CONTAINER, slot))
 				reagentBankButtons[slot] = button
 			end
+			
+			frame:RegisterEvent("PLAYERREAGENTBANKSLOTS_CHANGED")
+			function frame:PLAYERREAGENTBANKSLOTS_CHANGED(slot)
+				lib:UpdateButton(reagentBankButtons[slot], GetContainerItemLink(REAGENTBANK_CONTAINER, slot))
+			end
+			
 			reagentSlotsRegistered = true
 		end
 	end)
-	
-	frame:RegisterEvent("PLAYERREAGENTBANKSLOTS_CHANGED")
-	function frame:PLAYERREAGENTBANKSLOTS_CHANGED(slot)
-		lib:UpdateButton(reagentBankButtons[slot], GetContainerItemLink(REAGENTBANK_CONTAINER, slot))
-	end
 end
 
 do	-- void storage
@@ -215,7 +216,7 @@ do	-- guild bank
 			local tab = GetCurrentGuildBankTab()
 			for column = 1, NUM_GUILDBANK_COLUMNS do
 				for i = 1, NUM_SLOTS_PER_GUILDBANK_GROUP do
-					local slot = column * NUM_SLOTS_PER_GUILDBANK_GROUP + i
+					local slot = (column - 1) * NUM_SLOTS_PER_GUILDBANK_GROUP + i
 					lib:UpdateButton(_G["GuildBankColumn"..column.."Button"..i], GetGuildBankItemLink(tab, slot))
 				end
 			end
