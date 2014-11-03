@@ -141,7 +141,9 @@ do	-- bank
 	
 	frame:RegisterEvent("PLAYERBANKSLOTS_CHANGED")
 	function frame:PLAYERBANKSLOTS_CHANGED(slot)
-		lib:UpdateButton(bankButtons[slot], GetContainerItemLink(BANK_CONTAINER, slot))
+		if slot <= NUM_BANKGENERIC_SLOTS then
+			lib:UpdateButton(bankButtons[slot], GetContainerItemLink(BANK_CONTAINER, slot))
+		end
 	end
 	
 	frame:RegisterEvent("BANKFRAME_OPENED")
@@ -228,16 +230,15 @@ do	-- guild bank
 end
 
 do	-- mail
-	-- for i = 1, INBOXITEMS_TO_DISPLAY do
-		-- lib:RegisterButton(_G["MailItem"..i.."Button"], "MAIL", true)
-	-- end
+	for i = 1, ATTACHMENTS_MAX_RECEIVE do
+		lib:RegisterButton(_G["OpenMailAttachmentButton"..i], "MAIL", true)
+	end
 	
-	-- frame:RegisterEvent("MAIL_INBOX_UPDATE")
-	-- function frame:MAIL_INBOX_UPDATE()
-		-- for slot = 1, INBOXITEMS_TO_DISPLAY do
-			-- lib:UpdateButton(voidButtons[slot], GetVoidItemInfo(tab, slot))
-		-- end
-	-- end
+	hooksecurefunc("OpenMailFrame_UpdateButtonPositions", function()
+		for i = 1, ATTACHMENTS_MAX_RECEIVE do
+			lib:UpdateButton(_G["OpenMailAttachmentButton"..i], GetInboxItemLink(InboxFrame.openMailID, i))
+		end
+	end)
 end
 
 do	-- merchant
@@ -257,7 +258,7 @@ do	-- merchant
 	end
 	
 	hooksecurefunc("MerchantFrame_UpdateBuybackInfo", function()
-		for i = 1, GetMerchantNumItems() do
+		for i = 1, BUYBACK_ITEMS_PER_PAGE do
 			lib:UpdateButton(_G["MerchantItem"..i.."ItemButton"], GetBuybackItemLink(i))
 		end
 	end)
