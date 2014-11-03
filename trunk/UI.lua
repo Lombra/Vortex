@@ -346,40 +346,6 @@ function GameTooltip_OnTooltipAddMoney(self, cost, maxcost)
 	onTooltipAddMoney(self, cost, maxcost)
 end
 
-do
-	-- local All = Vortex:NewModule("All", {
-		-- label = "All items",
-		-- search = false,
-		-- items = false,
-	-- })
-	
-	-- function All:BuildList(character)
-		-- local added = {}
-		-- local list = {}
-		-- for k, module in Vortex:IterateModules() do
-			-- if module.items then
-				-- for i, v in ipairs(module:GetList(character)) do
-					-- local item = v.link or v.id
-					-- if not added[item] then
-						-- tinsert(list, {
-							-- id = v.id,
-							-- link = v.link,
-							-- count = v.count,
-						-- })
-						-- if item then
-							-- added[item] = #list
-						-- end
-					-- else
-						-- local item = list[added[item]]
-						-- item.count = (item.count or v.count) and (item.count or 0) + (v.count or 0)
-					-- end
-				-- end
-			-- end
-		-- end
-		-- return list
-	-- end
-end
-
 local bagFrames = {}
 local containerButtons = {}
 
@@ -723,11 +689,11 @@ local function onClick(self, characterKey)
 	CloseDropDownMenus()
 end
 
-local button = Vortex:CreateDropdown("Frame", characterTab.frame)
-button:SetWidth(128)
-button:JustifyText("LEFT")
-button:SetPoint("TOPLEFT", frame, 0, -29)
-button.initialize = function(self, level)
+local characterMenu = Vortex:CreateDropdown("Frame", characterTab.frame)
+characterMenu:SetWidth(128)
+characterMenu:JustifyText("LEFT")
+characterMenu:SetPoint("TOPLEFT", frame, 0, -29)
+characterMenu.initialize = function(self, level)
 	for i, characterKey in ipairs(Vortex:GetCharacters(UIDROPDOWNMENU_MENU_VALUE)) do
 		local accountKey, realmKey, characterName = strsplit(".", characterKey)
 		local info = UIDropDownMenu_CreateInfo()
@@ -759,7 +725,7 @@ button.initialize = function(self, level)
 		end
 	end
 end
-Vortex.characterMenu = button
+Vortex.characterMenu = characterMenu
 
 
 local empty = {}
