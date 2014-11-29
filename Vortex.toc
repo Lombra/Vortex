@@ -5,6 +5,7 @@
 ## Author: Lombra
 ## SavedVariables: VortexDB
 ## RequiredDeps: DataStore
+## OptionalDeps: DataStore_Inventory, DataStore_Containers, DataStore_Mails, DataStore_Auctions
 
 embeds.xml
 
