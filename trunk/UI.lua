@@ -221,26 +221,32 @@ for i = 1, 4 do
 	tooltip.rows[i] = L
 end
 
+local bindPickupStrings = {
+	[ITEM_BIND_ON_PICKUP] = true, --"Binds when picked up"
+	[ITEM_BIND_QUEST] = true, -- "Quest Item"
+}
+
 local function isSoulboundItem(item)
     tooltip:SetOwner(UIParent, "ANCHOR_NONE")
     tooltip:SetItemByID(item)
 	for i = 1, #tooltip.rows do
-		if tooltip.rows[i]:GetText() == ITEM_BIND_ON_PICKUP then
+		if bindPickupStrings[tooltip.rows[i]:GetText()] then
 			return true
 		end
 	end
 	return false
 end
 
--- ITEM_BIND_TO_ACCOUNT = "Binds to account";
--- ITEM_BIND_TO_BNETACCOUNT = "Binds to Battle.net account";
--- ITEM_BNETACCOUNTBOUND = "Battle.net Account Bound";
+local bindAccountStrings = {
+	[ITEM_BIND_TO_ACCOUNT] = true, --"Binds to account"
+	[ITEM_BIND_TO_BNETACCOUNT] = true, -- "Binds to Battle.net account"
+}
 
 local function isBNetBoundItem(item)
     tooltip:SetOwner(UIParent, "ANCHOR_NONE")
     tooltip:SetItemByID(item)
 	for i = 1, #tooltip.rows do
-		if tooltip.rows[i]:GetText() == ITEM_BIND_TO_BNETACCOUNT then
+		if bindAccountStrings[tooltip.rows[i]:GetText()] then
 			return true
 		end
 	end

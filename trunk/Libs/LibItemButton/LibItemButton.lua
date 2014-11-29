@@ -67,6 +67,56 @@ function lib:RegisterUpdateCallback(target, callback, category)
 	self.callbacks["OnButtonUpdate"][target] = callback
 end
 
+function lib:ComplementButton(button, icon, count, stock, searchOverlay, border)
+	if not button.icon then
+		if icon then
+			button.icon = icon
+		else
+		end
+	end
+	if not button.Count then
+		if count then
+			button.Count = count
+		else
+			button.Count = button:CreateFontString(nil, nil, "NumberFontNormal", 2)
+			button.Count:SetJustifyH("RIGHT")
+			button.Count:SetPoint("BOTTOMRIGHT", -5, 2)
+			button.Count:Hide()
+		end
+	end
+	if not button.Stock then
+		if stock then
+			button.Stock = stock
+		else
+			-- button.Stock = button:CreateFontString(nil, nil, "NumberFontNormalYellow", 2)
+			-- button.Stock:SetPoint("TOPLEFT", 0, -2)
+			-- button.Stock:SetJustifyH("LEFT")
+			-- button.Stock:Hide()
+		end
+	end
+	if not button.searchOverlay then
+		if searchOverlay then
+			button.searchOverlay = searchOverlay
+		else
+			-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
+			-- button.searchOverlay:SetAllPoints()
+			-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
+			-- button.searchOverlay:Hide()
+		end
+	end
+	if not button.IconBorder then
+		if border then
+			button.IconBorder = border
+		else
+			-- button.IconBorder = button:CreateTexture(nil, "OVERLAY")
+			-- button.IconBorder:SetSize(37, 37)
+			-- button.IconBorder:SetPoint("CENTER")
+			-- button.IconBorder:SetTexture([[Interface\Common\WhiteIconFrame]])
+			-- button.IconBorder:Hide()
+		end
+	end
+end
+
 
 local frame = CreateFrame("Frame")
 frame:SetScript("OnEvent", function(self, event, ...)
@@ -182,14 +232,6 @@ do	-- void storage
 	function frame:VOID_STORAGE_OPEN()
 		for slot = 1, 80 do
 			local button = _G["VoidStorageStorageButton"..slot]
-			-- button.Count = button:CreateFontString(nil, nil, "NumberFontNormal", 2)
-			-- button.Count:SetPoint("BOTTOMRIGHT", -5, 2)
-			-- button.Count:SetJustifyH("RIGHT")
-			-- button.Count:Hide()
-			-- button.Stock = button:CreateFontString(nil, nil, "NumberFontNormalYellow", 2)
-			-- button.Stock:SetPoint("TOPLEFT", 0, -2)
-			-- button.Stock:SetJustifyH("LEFT")
-			-- button.Stock:Hide()
 			lib:RegisterButton(button, "VOIDSTORAGE", true)
 			lib:UpdateButton(button, GetVoidItemHyperlinkString((VoidStorageFrame.page - 1) * 80 + slot))
 		end
@@ -239,6 +281,16 @@ do	-- mail
 			lib:UpdateButton(_G["OpenMailAttachmentButton"..i], GetInboxItemLink(InboxFrame.openMailID, i))
 		end
 	end)
+	
+	-- for i = 1, ATTACHMENTS_MAX_SEND do
+		-- lib:RegisterButton(_G["SendMailAttachment"..i], "MAIL", true)
+	-- end
+	
+	-- hooksecurefunc("SendMailFrame_Update", function()
+		-- for i = 1, ATTACHMENTS_MAX_SEND do
+			-- lib:UpdateButton(_G["OpenMailAttachmentButton"..i], GetSendMailItemLink(i))
+		-- end
+	-- end)
 end
 
 do	-- merchant
@@ -246,11 +298,14 @@ do	-- merchant
 		lib:RegisterButton(_G["MerchantItem"..i.."ItemButton"], "MERCHANT", true)
 	end
 	
+	lib:RegisterButton(MerchantBuyBackItemItemButton, "MERCHANT_BUYBACK", true)
+	
 	hooksecurefunc("MerchantFrame_UpdateMerchantInfo", function()
 		for i = 1, min(MERCHANT_ITEMS_PER_PAGE, GetMerchantNumItems()) do
 			local slot = MERCHANT_ITEMS_PER_PAGE * (MerchantFrame.page - 1) + i
 			lib:UpdateButton(_G["MerchantItem"..i.."ItemButton"], GetMerchantItemLink(slot))
 		end
+		lib:UpdateButton(MerchantBuyBackItemItemButton, GetBuybackItemLink(GetNumBuybackItems()))
 	end)
 	
 	for i = 1, BUYBACK_ITEMS_PER_PAGE do
@@ -272,11 +327,6 @@ do	-- auction
 			local button = _G[buttonName]
 			button.icon = _G[buttonName.."IconTexture"]
 			button.Count = _G[buttonName.."Count"]
-			-- button.Stock = _G[buttonName.."Stock"]
-			-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
-			-- button.searchOverlay:SetAllPoints()
-			-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
-			-- button.searchOverlay:Hide()
 			lib:RegisterButton(button, "AUCTION_BROWSE", true)
 		end
 		
@@ -292,11 +342,6 @@ do	-- auction
 			local button = _G[buttonName]
 			button.icon = _G[buttonName.."IconTexture"]
 			button.Count = _G[buttonName.."Count"]
-			-- button.Stock = _G[buttonName.."Stock"]
-			-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
-			-- button.searchOverlay:SetAllPoints()
-			-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
-			-- button.searchOverlay:Hide()
 			lib:RegisterButton(button, "AUCTION_BID", true)
 		end
 		
@@ -312,11 +357,6 @@ do	-- auction
 			local button = _G[buttonName]
 			button.icon = _G[buttonName.."IconTexture"]
 			button.Count = _G[buttonName.."Count"]
-			-- button.Stock = _G[buttonName.."Stock"]
-			-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
-			-- button.searchOverlay:SetAllPoints()
-			-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
-			-- button.searchOverlay:Hide()
 			lib:RegisterButton(button, "AUCTION_BID", true)
 		end
 		
@@ -333,50 +373,44 @@ do	-- auction
 end
 
 do	-- black market
-	frame:RegisterEvent("BLACK_MARKET_OPEN")
-	function frame:BLACK_MARKET_OPEN()
-		local button = BlackMarketFrame.HotDeal.Item
-		button.icon = button.IconTexture
-		-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
-		-- button.searchOverlay:SetAllPoints()
-		-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
-		-- button.searchOverlay:Hide()
-		-- button.IconBorder = button:CreateTexture(nil, "OVERLAY")
-		-- button.IconBorder:SetSize(37, 37)
-		-- button.IconBorder:SetPoint("CENTER")
-		-- button.IconBorder:SetTexture([[Interface\Common\WhiteIconFrame]])
-		-- button.IconBorder:Hide()
-		lib:RegisterButton(button, "BLACKMARKET_HOT", true)
+	frame:RegisterEvent("ADDON_LOADED")
+	function frame:ADDON_LOADED(addon)
+		if addon ~= "Blizzard_BlackMarketUI" then return end
 		
-		hooksecurefunc("BlackMarketFrame_UpdateHotItem", function(self)
-			local link = select(15,  C_BlackMarket.GetHotItem())
-			lib:UpdateButton(BlackMarketFrame.HotDeal.Item, link)
-		end)
-		
-		for i, button in ipairs(BlackMarketScrollFrame.buttons) do
+		frame:RegisterEvent("BLACK_MARKET_ITEM_UPDATE")
+		function frame:BLACK_MARKET_ITEM_UPDATE()
+			local button = BlackMarketFrame.HotDeal.Item
 			button.icon = button.IconTexture
-			-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
-			-- button.searchOverlay:SetAllPoints()
-			-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
-			-- button.searchOverlay:Hide()
-			-- button.IconBorder = button:CreateTexture(nil, "OVERLAY")
-			-- button.IconBorder:SetSize(37, 37)
-			-- button.IconBorder:SetPoint("CENTER")
-			-- button.IconBorder:SetTexture([[Interface\Common\WhiteIconFrame]])
-			-- button.IconBorder:Hide()
-			lib:RegisterButton(button.Item, "BLACKMARKET", true)
+			lib:RegisterButton(button, "BLACKMARKET_HOT", true)
+			
+			hooksecurefunc("BlackMarketFrame_UpdateHotItem", function(self)
+				local link = select(15,  C_BlackMarket.GetHotItem())
+				lib:UpdateButton(BlackMarketFrame.HotDeal.Item, link)
+			end)
+			
+			for i, button in ipairs(BlackMarketScrollFrame.buttons) do
+				button.Item.icon = button.Item.IconTexture
+				lib:RegisterButton(button.Item, "BLACKMARKET", true)
+			end
+			
+			local function update()
+				local buttons = BlackMarketScrollFrame.buttons
+				for i = 1, min(#buttons, C_BlackMarket.GetNumItems()) do
+					local link = select(15,  C_BlackMarket.GetItemInfoByIndex(BlackMarketScrollFrame.offset + i))
+					lib:UpdateButton(buttons[i].Item, link)
+				end
+			end
+			
+			update()
+			
+			hooksecurefunc("BlackMarketScrollFrame_Update", update)
+			
+			self:UnregisterEvent("BLACK_MARKET_ITEM_UPDATE")
+			self.BLACK_MARKET_ITEM_UPDATE = nil
 		end
 		
-		hooksecurefunc("BlackMarketScrollFrame_Update", function()
-			local buttons = BlackMarketScrollFrame.buttons
-			for i = 1, min(#buttons, C_BlackMarket.GetNumItems()) do
-				local link = select(15,  C_BlackMarket.GetItemInfoByIndex(BlackMarketScrollFrame.offset + i))
-				lib:UpdateButton(buttons[i].Item, link)
-			end
-		end)
-		
-		self:UnregisterEvent("BLACK_MARKET_OPEN")
-		self.BLACK_MARKET_OPEN = nil
+		self:UnregisterEvent("ADDON_LOADED")
+		self.ADDON_LOADED = nil
 	end
 end
 
@@ -394,19 +428,6 @@ do	-- loot
 		local frame = _G["GroupLootFrame"..i]
 		local button = frame.IconFrame
 		button.icon = button.Icon
-		-- button.Stock = button:CreateFontString(nil, nil, "NumberFontNormalYellow", 2)
-		-- button.Stock:SetPoint("TOPLEFT", 0, -2)
-		-- button.Stock:SetJustifyH("LEFT")
-		-- button.Stock:Hide()
-		-- button.searchOverlay = button:CreateTexture(nil, "OVERLAY")
-		-- button.searchOverlay:SetAllPoints()
-		-- button.searchOverlay:SetTexture(0, 0, 0, 0.8)
-		-- button.searchOverlay:Hide()
-		-- button.IconBorder = button:CreateTexture(nil, "OVERLAY")
-		-- button.IconBorder:SetSize(37, 37)
-		-- button.IconBorder:SetPoint("CENTER")
-		-- button.IconBorder:SetTexture([[Interface\Common\WhiteIconFrame]])
-		-- button.IconBorder:Hide()
 		lib:RegisterButton(button, "GROUPLOOT", true)
 		frame:HookScript("OnShow", function(self)
 			local link = GetLootRollItemLink(self.rollID)
