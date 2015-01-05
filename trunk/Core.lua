@@ -2,12 +2,11 @@ local Libra = LibStub("Libra")
 
 local Vortex = Libra:NewAddon(...)
 _G.Vortex = Vortex
-Libra:EmbedWidgets(Vortex)
+Libra:Embed(Vortex)
 
 local myCharacter = DataStore:GetCharacter()
 local myRealm = GetRealmName()
 
-local connectedRealms = {}
 local sortedCharacters = {}
 local sortedGuilds = {}
 
@@ -83,26 +82,12 @@ function Vortex:OnInitialize()
 	self.selectedCharacter = character
 	local account, realm, charKey = strsplit(".", character)
 	self.characterMenu:SetText(charKey)
-	self:RegisterEvent("PLAYER_LOGIN")
 	self:RegisterEvent("PLAYER_GUILD_UPDATE")
-end
-
-function Vortex:PLAYER_LOGIN()
-	local _, realm = UnitFullName("player")
-	for i, v in ipairs(GetAutoCompleteRealms() or {}) do
-		if v ~= realm then
-			connectedRealms[v] = true
-		end
-	end
 end
 
 function Vortex:PLAYER_GUILD_UPDATE()
 	-- guild array for this realm will need to be rebuilt
 	sortedGuilds[myRealm] = nil
-end
-
-function Vortex:IsConnectedRealm(realm)
-	return connectedRealms[realm:gsub("[ -]", "")]
 end
 
 local function addUI(self)
