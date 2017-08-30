@@ -76,14 +76,14 @@ frame:HidePortrait()
 frame:HideButtonBar()
 frame:SetTitleText("Vortex")
 frame:SetScript("OnShow", function(self)
-	PlaySound("igCharacterInfoOpen")
+	PlaySound(SOUNDKIT.IG_CHARACTER_INFO_OPEN)
 	if not self:GetSelectedTab() then
 		Vortex:SelectModule(Vortex.db.defaultModule)
 		self:SelectTab(1)
 	end
 end)
 frame:SetScript("OnHide", function(self)
-	PlaySound("igCharacterInfoClose")
+	PlaySound(SOUNDKIT.IG_CHARACTER_INFO_CLOSE)
 	Vortex:CloseAllContainers()
 end)
 
