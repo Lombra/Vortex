@@ -153,7 +153,7 @@ bg:SetVertTile(true)
 local blackBG = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
 blackBG:SetPoint("TOPLEFT", tli, 4, -4)
 blackBG:SetPoint("BOTTOMRIGHT", bri, -4, 3)
-blackBG:SetTexture(0, 0, 0)
+blackBG:SetColorTexture(0, 0, 0)
 
 local moneyFrameBg = CreateFrame("Frame", nil, frame, "ThinGoldEdgeTemplate")
 moneyFrameBg:SetPoint("TOPLEFT", frame, "BOTTOMLEFT", 1, 25)

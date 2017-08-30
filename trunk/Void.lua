@@ -42,7 +42,7 @@ for i = 1, 4 do
 	texture:SetPoint("TOP", 0, -2)
 	texture:SetPoint("BOTTOM", 0, 2)
 	texture:SetPoint("LEFT", 2 + i * 95, 0)
-	texture:SetTexture(0.1451, 0.0941, 0.1373, 0.8)
+	texture:SetColorTexture(0.1451, 0.0941, 0.1373, 0.8)
 end
 
 local selectedTab = 1
