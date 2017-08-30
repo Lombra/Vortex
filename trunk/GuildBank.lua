@@ -167,7 +167,7 @@ local tabs = {}
 
 local function onClick(self)
 	if self:GetID() ~= selectedTab then
-		PlaySound("GuildBankOpenBag")
+		PlaySound(SOUNDKIT.GUILD_BANK_OPEN_BAG)
 	end
 	tabs[selectedTab].button:SetChecked(false)
 	self:SetChecked(true)
