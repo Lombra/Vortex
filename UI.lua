@@ -517,7 +517,7 @@ end
 local function onShow(self)
 	ContainerFrame1.bags[ContainerFrame1.bagsShown + 1] = self:GetName()
 	ContainerFrame1.bagsShown = ContainerFrame1.bagsShown + 1
-	PlaySound("igBackPackOpen")
+	PlaySound(SOUNDKIT.IG_BACKPACK_OPEN)
 	-- Vortex:SearchContainer(self:GetID())
 end
 
@@ -526,7 +526,7 @@ local function onHide(self)
 	-- Remove the closed bag from the list and collapse the rest of the entries
 	tDeleteItem(ContainerFrame1.bags, self:GetName())
 	UpdateContainerFrameAnchors()
-	PlaySound("igBackPackClose")
+	PlaySound(SOUNDKIT.IG_BACKPACK_CLOSE)
 	self.containerButton:SetChecked(false)
 end
 
