@@ -1,8 +1,9 @@
-## Interface: 70300
+## Interface: 80000
 ## Title: Vortex
 ## Version: @project-version@
 ## Notes: View information about all your characters.
 ## Author: Lombra
+
 ## SavedVariables: VortexDB
 ## RequiredDeps: DataStore
 ## OptionalDeps: DataStore_Inventory, DataStore_Containers, DataStore_Mails, DataStore_Auctions
