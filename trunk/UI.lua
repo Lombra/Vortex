@@ -394,7 +394,11 @@ local itemButtonMethods = {
 			end
 			self:SetChecked(not isOpen)
 		elseif self.item then
-			HandleModifiedItemClick(select(2, GetItemInfo(self.item)))
+			local link = self.item
+			if type(link) == "number" or link:match("item:%d+") then
+				link = select(2, GetItemInfo(self.item))
+			end
+			HandleModifiedItemClick(link)
 		end
 	end,
 
