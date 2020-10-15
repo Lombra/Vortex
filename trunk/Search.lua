@@ -71,7 +71,7 @@ local text = searchAllRealmsCheckButton:CreateFontString(nil, nil, "GameFontHigh
 text:SetPoint("RIGHT", searchAllRealmsCheckButton, "LEFT", 0, 1)
 text:SetText("Search all realms")
 
-local filterBar = CreateFrame("Frame", nil, Vortex.frame.list)
+local filterBar = CreateFrame("Frame", nil, Vortex.frame.list, "BackdropTemplate")
 filterBar:SetPoint("TOP", 0, -4)
 filterBar:SetPoint("LEFT", 4, 0)
 filterBar:SetPoint("RIGHT", -26, 0)
