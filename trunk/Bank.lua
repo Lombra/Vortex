@@ -31,7 +31,7 @@ local bg = BankUI:CreateTexture(nil, "BACKGROUND")
 bg:SetSize(256, 256)
 bg:SetPoint("TOPLEFT")
 bg:SetPoint("BOTTOMRIGHT")
-bg:SetTexture([[Interface\BankFrame\Bank-Background]], true)
+bg:SetTexture([[Interface\BankFrame\Bank-Background]], true, true)
 bg:SetHorizTile(true)
 bg:SetVertTile(true)
 

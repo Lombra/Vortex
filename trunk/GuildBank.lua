@@ -146,7 +146,7 @@ local bg = frame:CreateTexture(nil, "BACKGROUND")
 bg:SetSize(256, 256)
 bg:SetPoint("TOPLEFT", 2, -20)
 bg:SetPoint("BOTTOMRIGHT", -2, 20)
-bg:SetTexture([[Interface\GuildBankFrame\GuildVaultBG]], true)
+bg:SetTexture([[Interface\GuildBankFrame\GuildVaultBG]], true, true)
 bg:SetHorizTile(true)
 bg:SetVertTile(true)
 
