@@ -531,6 +531,7 @@ local function onShow(self)
 	ContainerFrame1.bags[ContainerFrame1.bagsShown + 1] = self:GetName()
 	ContainerFrame1.bagsShown = ContainerFrame1.bagsShown + 1
 	PlaySound(SOUNDKIT.IG_BACKPACK_OPEN)
+	UpdateContainerFrameAnchors()
 	-- Vortex:SearchContainer(self:GetID())
 end
 
