@@ -466,14 +466,23 @@ function Vortex:SetupItemButton(button)
 end
 
 function Vortex:CreateItemButton(parent)
-	local button = CreateFrame("Button", nil, parent, "ItemButtonTemplate")
+	local button = CreateFrame("ItemButton", nil, parent)
 	self:SetupItemButton(button)
 	return button
 end
 
+local function setChecked(self, checked)
+	self.checkedTexture:SetShown(checked)
+end
+
 function Vortex:CreateBagButton(parent)
-	local button = CreateFrame("CheckButton", nil, parent, "ItemButtonTemplate")
-	button:SetCheckedTexture([[Interface\Buttons\CheckButtonHilight]])
+	local button = CreateFrame("ItemButton", nil, parent)
+	button.SetChecked = setChecked
+	button.checkedTexture = button:CreateTexture(nil, "OVERLAY")
+	button.checkedTexture:SetTexture([[Interface\Buttons\CheckButtonHilight]])
+	button.checkedTexture:SetBlendMode("ADD")
+	button.checkedTexture:SetAllPoints()
+	button.checkedTexture:Hide()
 	button.isBag = true
 	self:SetupItemButton(button)
 	return button

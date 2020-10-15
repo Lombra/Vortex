@@ -180,6 +180,10 @@ local function onEnter(self)
 	GameTooltip:SetText(DataStore:GetGuildBankTabName(selectedGuild, self:GetID()))--, nil, nil, nil, nil, 1)
 end
 
+local function setChecked(self, checked)
+	self.checkedTexture:SetShown(checked)
+end
+
 for i = 1, 8 do
 	local tab = CreateFrame("Frame", nil, frame)
 	tab:SetSize(42, 50)
@@ -197,15 +201,20 @@ for i = 1, 8 do
 	bg:SetPoint("TOPLEFT")
 	bg:SetTexture([[Interface\GuildBankFrame\UI-GuildBankFrame-Tab]])
 	
-	local tabButton = CreateFrame("CheckButton", nil, tab, "ItemButtonTemplate")
+	local tabButton = CreateFrame("ItemButton", nil, tab)
 	tabButton:SetSize(36, 34)
 	tabButton:SetPoint("TOPLEFT", 2, -8)
-	tabButton:SetCheckedTexture([[Interface\Buttons\CheckButtonHilight]], "ADD")
 	tabButton:GetNormalTexture():SetSize(60, 60)
 	tabButton:SetScript("OnClick", onClick)
 	tabButton:SetScript("OnEnter", onEnter)
 	tabButton:SetScript("OnLeave", GameTooltip_Hide)
 	tabButton:SetID(i)
+	tabButton.SetChecked = setChecked
+	tabButton.checkedTexture = tabButton:CreateTexture(nil, "OVERLAY")
+	tabButton.checkedTexture:SetTexture([[Interface\Buttons\CheckButtonHilight]])
+	tabButton.checkedTexture:SetBlendMode("ADD")
+	tabButton.checkedTexture:SetAllPoints()
+	tabButton.checkedTexture:Hide()
 	tab.button = tabButton
 end
 
