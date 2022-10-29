@@ -3,15 +3,16 @@ package-as: Vortex
 enable-nolib-creation: no
 
 externals:
-    Libs/LibStub: https://repos.wowace.com/wow/ace3/trunk/LibStub
-    Libs/CallbackHandler-1.0: https://repos.wowace.com/wow/ace3/trunk/CallbackHandler-1.0
-    Libs/LibBabble-Inventory-3.0: https://repos.wowace.com/wow/libbabble-inventory-3-0/trunk
-    Libs/Libra: https://repos.wowace.com/wow/libra/trunk/Libra
-    Libs/LibItemInfo-1.0: https://repos.wowace.com/wow/libiteminfo-1-0/trunk/LibItemInfo-1.0
+  Libs/LibStub: https://repos.wowace.com/wow/ace3/trunk/LibStub
+  Libs/CallbackHandler-1.0: https://repos.wowace.com/wow/ace3/trunk/CallbackHandler-1.0
+  Libs/LibBabble-Inventory-3.0: https://repos.wowace.com/wow/libbabble-inventory-3-0/trunk
+  Libs/Libra: https://github.com/Lombra/Libra.git
+  Libs/LibItemButton: https://github.com/Lombra/LibItemButton.git
+  Libs/LibItemInfo-1.0: https://repos.wowace.com/wow/libiteminfo-1-0/trunk/LibItemInfo-1.0
 
 required-dependencies:
-    - datastore
-    - datastore_auctions
-    - datastore_containers
-    - datastore_inventory
-    - datastore_mails
+  - datastore
+  - datastore_auctions
+  - datastore_containers
+  - datastore_inventory
+  - datastore_mails
