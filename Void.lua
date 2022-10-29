@@ -16,7 +16,7 @@ local buttons = {}
 for i = 1, 80 do
 	local button = Vortex:CreateItemButton(Void.ui)
 	button:SetID(i)
-	button:SetNormalTexture(nil)
+	button:ClearNormalTexture()
 	if i == 1 then
 		button:SetPoint("TOPLEFT", 10, -8 - 6)
 	elseif i % 8 == 1 then

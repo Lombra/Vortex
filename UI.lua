@@ -388,8 +388,8 @@ local itemButtonMethods = {
 				bag:SetID(bagID)
 				bag.PortraitButton:SetID(bagID)
 				local icon, link, size = DataStore:GetContainerInfo(Vortex:GetSelectedCharacter(), bagID)
-				_G[bag:GetName().."Name"]:SetText(link and GetItemInfo(link) or BACKPACK_TOOLTIP)
-				SetPortraitToTexture(bag.Portrait, icon)
+				bag:SetTitle(link and GetItemInfo(link) or BACKPACK_TOOLTIP)
+				bag:SetPortraitTextureRaw(icon)
 				Vortex:UpdateContainer(bagID, Vortex:GetSelectedCharacter())
 			end
 			self:SetChecked(not isOpen)
@@ -553,13 +553,13 @@ for i = 0, 11 do
 	bag.PortraitButton:SetScript("OnEnter", onEnter)
 	bag.PortraitButton:SetScript("OnLeave", GameTooltip_Hide)
 	bag.PortraitButton:SetScript("OnClick", nil)
-	_G[frameName.."CloseButton"]:SetScript("OnClick", HideParentPanel)
+	bag.CloseButton:SetScript("OnClick", HideParentPanel)
 	bagFrames[i] = bag
 	bag.buttons = {}
 	for slot = 1, 36 do
 		local button = _G[frameName.."Item"..slot]
 		Vortex:SetupItemButton(button)
-		button:RegisterForDrag(nil)
+		button:RegisterForDrag()
 		button:SetScript("OnHide", nil)
 		button:SetScript("OnDragStart", nil)
 		button:SetScript("OnReceiveDrag", nil)

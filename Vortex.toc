@@ -1,4 +1,4 @@
-## Interface: 90001
+## Interface: 100000
 ## Title: Vortex
 ## Version: @project-version@
 ## Notes: View information about all your characters.
